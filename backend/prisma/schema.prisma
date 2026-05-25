@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_logs {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  action     String?   @db.VarChar(100)
+  table_name String?   @db.VarChar(100)
+  record_id  String?   @db.Uuid
+  old_data   Json?
+  new_data   Json?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model evidences {
+  id            String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  signal_id     String?      @db.Uuid
+  inspection_id String?      @db.Uuid
+  uploaded_by   String?      @db.Uuid
+  image_url     String
+  description   String?
+  created_at    DateTime?    @default(now()) @db.Timestamp(6)
+  inspections   inspections? @relation(fields: [inspection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  signals       signals?     @relation(fields: [signal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users         users?       @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model inspections {
+  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  signal_id       String?        @db.Uuid
+  technician_id   String?        @db.Uuid
+  inspection_date DateTime?      @default(now()) @db.Timestamp(6)
+  status          signal_status?
+  observations    String?
+  evidence_image  String?
+  latitude        Float?
+  longitude       Float?
+  created_at      DateTime?      @default(now()) @db.Timestamp(6)
+  evidences       evidences[]
+  signals         signals?       @relation(fields: [signal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users?         @relation(fields: [technician_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([signal_id], map: "idx_inspections_signal")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model maintenances {
+  id               String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  signal_id        String?             @db.Uuid
+  assigned_to      String?             @db.Uuid
+  status           maintenance_status? @default(PENDIENTE)
+  description      String?
+  cost             Decimal?            @db.Decimal(12, 2)
+  maintenance_date DateTime?           @db.Date
+  completed_at     DateTime?           @db.Timestamp(6)
+  created_at       DateTime?           @default(now()) @db.Timestamp(6)
+  users            users?              @relation(fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  signals          signals?            @relation(fields: [signal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([signal_id], map: "idx_maintenances_signal")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model municipalities {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name       String    @db.VarChar(120)
+  department String?   @db.VarChar(120)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  signals    signals[]
+  zones      zones[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model notifications {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  title      String?   @db.VarChar(255)
+  message    String?
+  is_read    Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model roles {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String    @unique @db.VarChar(50)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  users       users[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model signal_categories {
+  id           String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name         String         @db.VarChar(100)
+  description  String?
+  created_at   DateTime?      @default(now()) @db.Timestamp(6)
+  signal_types signal_types[]
+  signals      signals[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model signal_types {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  category_id       String?            @db.Uuid
+  name              String             @db.VarChar(100)
+  code              String?            @db.VarChar(50)
+  description       String?
+  created_at        DateTime?          @default(now()) @db.Timestamp(6)
+  signal_categories signal_categories? @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  signals           signals[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model signals {
+  id                    String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  signal_code           String                    @unique @db.VarChar(100)
+  category_id           String?                   @db.Uuid
+  signal_type_id        String?                   @db.Uuid
+  municipality_id       String?                   @db.Uuid
+  zone_id               String?                   @db.Uuid
+  installed_by          String?                   @db.Uuid
+  status                signal_status?            @default(BUENO)
+  address               String?
+  description           String?
+  observations          String?
+  installation_date     DateTime?                 @db.Date
+  last_maintenance_date DateTime?                 @db.Date
+  image_url             String?
+  latitude              Float
+  longitude             Float
+  geom                  Unsupported("geography")?
+  is_active             Boolean?                  @default(true)
+  created_at            DateTime?                 @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?                 @default(now()) @db.Timestamp(6)
+  evidences             evidences[]
+  inspections           inspections[]
+  maintenances          maintenances[]
+  signal_categories     signal_categories?        @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                 users?                    @relation(fields: [installed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  municipalities        municipalities?           @relation(fields: [municipality_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  signal_types          signal_types?             @relation(fields: [signal_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  zones                 zones?                    @relation(fields: [zone_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([geom], map: "idx_signals_geom", type: Gist)
+  @@index([status], map: "idx_signals_status")
+  @@index([zone_id], map: "idx_signals_zone")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id            String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  role_id       String?         @db.Uuid
+  full_name     String          @db.VarChar(150)
+  email         String          @unique @db.VarChar(150)
+  password      String
+  phone         String?         @db.VarChar(30)
+  is_active     Boolean?        @default(true)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamp(6)
+  audit_logs    audit_logs[]
+  evidences     evidences[]
+  inspections   inspections[]
+  maintenances  maintenances[]
+  notifications notifications[]
+  signals       signals[]
+  roles         roles?          @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model zones {
+  id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  municipality_id String?         @db.Uuid
+  name            String          @db.VarChar(120)
+  zone_type       zone_type
+  description     String?
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  signals         signals[]
+  municipalities  municipalities? @relation(fields: [municipality_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum maintenance_status {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+}
+
+enum signal_status {
+  BUENO
+  REGULAR
+  DETERIORADO
+  CAIDO
+  DESAPARECIDO
+}
+
+enum user_role {
+  ADMIN
+  SUPERVISOR
+  TECNICO
+  CONSULTA
+}
+
+enum zone_type {
+  URBANA
+  RURAL
+}

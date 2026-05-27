@@ -14,8 +14,15 @@ export const registerSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  email: z.string().trim().email('Correo electronico invalido').toLowerCase(),
-  password: z.string().min(1, 'La contrasena es obligatoria'),
+  email: z
+    .string()
+    .trim()
+    .email('Correo invalido')
+    .toLowerCase(),
+
+  password: z
+    .string()
+    .min(6, 'Contraseña invalida'),
 })
 
 type RegisterDTO = z.infer<typeof registerSchema>
@@ -90,9 +97,9 @@ export const registerUser = async ({
     where: { name: municipality },
   })
 
-  if (!municipalityExists) {
-    throw new Error('Municipio no encontrado')
-  }
+ // if (!municipalityExists) {
+ //   throw new Error('Municipio no encontrado')
+ // }
 
   const user = await prisma.users.create({
     data: {
@@ -114,43 +121,51 @@ export const loginUser = async ({
   password,
 }: LoginDTO) => {
 
-  const user = await prisma.users.findUnique({
+  const user = await prisma.users.findFirst({
     where: {
-      email,
+      email: email.toLowerCase(),
     },
     select: loginUserSelect,
   })
 
   if (!user) {
-    throw new Error('Usuario no encontrado')
+    throw new Error(
+      'Usuario no encontrado'
+    )
   }
 
-  const passwordMatch = await bcrypt.compare(
-    password,
-    user.password
-  )
+  const passwordMatch =
+    await bcrypt.compare(
+      password,
+      user.password
+    )
 
   if (!passwordMatch) {
-    throw new Error('Contrasena incorrecta')
+    throw new Error(
+      'Contraseña incorrecta'
+    )
   }
 
   const token = jwt.sign(
     {
-      id: user.id,
-      email: user.email,
+      userId: user.id,
       role_id: user.role_id,
     },
-    getJwtSecret(),
+    process.env.JWT_SECRET as string,
     {
       expiresIn: '1d',
     }
   )
 
-  const { password: _password, ...safeUser } = user
-
   return {
     token,
-    user: safeUser,
+    user: {
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      role_id: user.role_id,
+      roles: user.roles,
+    },
   }
 
 }

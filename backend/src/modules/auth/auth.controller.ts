@@ -68,25 +68,28 @@ export const login = async (
 
   try {
 
-    const { email, password } = loginSchema.parse(req.body)
+    const {
+      email,
+      password,
+    } = loginSchema.parse(req.body)
 
-    const result = await loginUser({
+    const data = await loginUser({
       email,
       password,
     })
 
     return res.status(200).json({
       message: 'Login exitoso',
-      token: result.token,
-      user: result.user,
+      ...data,
     })
 
   } catch (error) {
 
     return res.status(400).json({
-      message: getErrorMessage(error),
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Error interno',
     })
-
   }
-
 }

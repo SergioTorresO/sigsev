@@ -26,3 +26,8 @@ cd backend
 npm install
 npm run dev
 ```
+## user
+
+Sato@gmail.com
+checho2002
+-admin

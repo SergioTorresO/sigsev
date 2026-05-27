@@ -10,7 +10,9 @@ import {
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof ZodError) {
-    return error.issues.map((issue) => issue.message).join(', ')
+    const msgs = error.issues.map((issue) => issue.message)
+    const unique = Array.from(new Set(msgs))
+    return unique.join(', ')
   }
 
   if (error instanceof Error) {
@@ -27,12 +29,15 @@ export const register = async (
 
   try {
 
-    const { full_name, email, password } = registerSchema.parse(req.body)
+    const { full_name, email, password, phone, role_id, municipality } = registerSchema.parse(req.body)
 
     const user = await registerUser({
       full_name,
       email,
       password,
+      phone,
+      role_id,
+      municipality,
     })
 
     return res.status(201).json({
@@ -42,9 +47,15 @@ export const register = async (
 
   } catch (error) {
 
-    return res.status(400).json({
-      message: getErrorMessage(error),
-    })
+    if (error instanceof ZodError) {
+      return res.status(422).json({ message: getErrorMessage(error) })
+    }
+
+    if (error instanceof Error) {
+      return res.status(400).json({ message: error.message })
+    }
+
+    return res.status(500).json({ message: 'Error interno del servidor' })
 
   }
 

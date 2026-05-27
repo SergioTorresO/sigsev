@@ -178,6 +178,8 @@ model users {
   is_active     Boolean?        @default(true)
   created_at    DateTime?       @default(now()) @db.Timestamp(6)
   updated_at    DateTime?       @default(now()) @db.Timestamp(6)
+  position      String?         @db.VarChar(100)
+  municipality  String?         @db.VarChar(100)
   audit_logs    audit_logs[]
   evidences     evidences[]
   inspections   inspections[]

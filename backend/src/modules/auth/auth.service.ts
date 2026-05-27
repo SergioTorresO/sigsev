@@ -4,9 +4,13 @@ import * as jwt from 'jsonwebtoken'
 import { z } from 'zod'
 
 export const registerSchema = z.object({
-  full_name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres'),
+  full_name: z.string().trim().min(3, 'El nombre es muy corto'),
   email: z.string().trim().email('Correo electronico invalido').toLowerCase(),
-  password: z.string().min(8, 'La contrasena debe tener al menos 8 caracteres'),
+  password: z.string().min(6, 'La contrasena debe tener al menos 6 caracteres'),
+  // Use a single regex to validate phone format and length to avoid duplicate errors
+  phone: z.string().trim().regex(/^[0-9+\-()\s]{7,20}$/, 'Telefono invalido'),
+  role_id: z.string().uuid('role_id debe ser un UUID').optional(),
+  municipality: z.string().trim().min(2, 'Municipio invalido'),
 })
 
 export const loginSchema = z.object({
@@ -43,6 +47,9 @@ export const registerUser = async ({
   full_name,
   email,
   password,
+  phone,
+  role_id,
+  municipality,
 }: RegisterDTO) => {
 
   const userExists = await prisma.users.findUnique({
@@ -57,14 +64,34 @@ export const registerUser = async ({
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  const userRole = await prisma.roles.findFirst({
-    where: {
-      name: 'CONSULTA',
-    },
+  // Determine role: use provided role_id if valid, otherwise fallback to default 'CONSULTA'
+  let finalRoleId: string | null = null
+
+  if (role_id) {
+    const providedRole = await prisma.roles.findUnique({
+      where: { id: role_id },
+    })
+
+    if (!providedRole) {
+      throw new Error('Rol no encontrado')
+    }
+
+    finalRoleId = providedRole.id
+  } else {
+    const defaultRole = await prisma.roles.findFirst({ where: { name: 'CONSULTA' } })
+    if (!defaultRole) {
+      throw new Error('Rol CONSULTA no encontrado')
+    }
+    finalRoleId = defaultRole.id
+  }
+
+  // Validate municipality exists in the system
+  const municipalityExists = await prisma.municipalities.findFirst({
+    where: { name: municipality },
   })
 
-  if (!userRole) {
-    throw new Error('Rol CONSULTA no encontrado')
+  if (!municipalityExists) {
+    throw new Error('Municipio no encontrado')
   }
 
   const user = await prisma.users.create({
@@ -72,7 +99,9 @@ export const registerUser = async ({
       full_name,
       email,
       password: hashedPassword,
-      role_id: userRole.id,
+      phone,
+      role_id: finalRoleId,
+      municipality,
     },
     select: safeUserSelect,
   })

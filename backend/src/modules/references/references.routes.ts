@@ -7,7 +7,7 @@ router.use(verifyToken)
 
 router.get('/municipalities', async (_req: Request, res: Response) => {
   const { data, error } = await supabase
-    .from('municipalities').select('id, name, department').order('name')
+    .from('municipalities').select('id, name').order('name')
   if (error) return res.status(500).json({ message: error.message })
   return res.json(data)
 })

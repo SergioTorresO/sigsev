@@ -17,7 +17,7 @@ export async function apiFetch<T = unknown>(
   const { auth = true, headers = {}, ...rest } = options
 
   const token = getToken()
-  const authHeader =
+  const authHeader: Record<string, string> =
     auth && token ? { Authorization: `Bearer ${token}` } : {}
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -45,5 +45,7 @@ export const api = {
     apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body), auth }),
   put: <T>(path: string, body: unknown) =>
     apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) =>
+    apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
 }

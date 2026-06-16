@@ -94,11 +94,18 @@ export default function DashboardLayout({
         </nav>
 
         <div className="border-t border-zinc-700 pt-4">
-          <p className="truncate text-sm font-medium text-white">{user?.full_name}</p>
-          <p className="truncate text-xs text-zinc-400">{user?.email}</p>
-          <p className="mt-1 text-xs font-semibold text-emerald-400">
-            {user?.roles?.name ?? 'Sin rol'}
-          </p>
+          <a
+            href="/dashboard/profile"
+            className={`block rounded-md px-2 py-2 transition-colors hover:bg-zinc-800 ${
+              pathname.startsWith('/dashboard/profile') ? 'bg-zinc-800' : ''
+            }`}
+          >
+            <p className="truncate text-sm font-medium text-white">{user?.full_name}</p>
+            <p className="truncate text-xs text-zinc-400">{user?.email}</p>
+            <p className="mt-1 text-xs font-semibold text-emerald-400">
+              {user?.roles?.name ?? 'Sin rol'}
+            </p>
+          </a>
           <button
             onClick={handleLogout}
             className="mt-3 w-full rounded-md border border-zinc-600 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"

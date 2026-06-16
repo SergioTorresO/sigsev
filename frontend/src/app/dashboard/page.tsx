@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
+import DashboardLayout from '@/components/DashboardLayout'
 
 // --- Types ---
 interface Signal {
@@ -54,19 +54,9 @@ const STATUS_LABELS: Record<string, string> = {
   DESAPARECIDO: 'Desaparecido',
 }
 
-const navItems = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Mapa GIS', href: '/dashboard/mapa' },
-  { label: 'Señales', href: '/dashboard/signals' },
-  { label: 'Inspecciones', href: '/dashboard/inspections' },
-  { label: 'Mantenimientos', href: '/dashboard/maintenances' },
-  { label: 'Reportes', href: '/dashboard/reportes' },
-]
-
 // --- Component ---
 export default function DashboardPage() {
-  const { user, logout, isLoading } = useAuth()
-  const router = useRouter()
+  const { user, isLoading } = useAuth()
 
   const [signals, setSignals] = useState<SignalsResponse | null>(null)
   const [inspections, setInspections] = useState<InspectionsResponse | null>(null)
@@ -95,11 +85,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoading) fetchDashboardData()
   }, [isLoading, fetchDashboardData])
-
-  const handleLogout = () => {
-    logout()
-    router.push('/login')
-  }
 
   // Compute stats from real data
   const statusCounts = signals?.data.reduce(
@@ -148,77 +133,29 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-zinc-100 text-zinc-950">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-zinc-200 bg-zinc-950 px-5 py-6 text-white lg:flex lg:flex-col">
-        <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300">
-            Inventario vial
-          </p>
-          <h1 className="mt-2 text-2xl font-bold">SIGSEV</h1>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className={`block rounded-md px-3 py-2 text-sm font-medium ${
-                item.href === '/dashboard'
-                  ? 'bg-white text-zinc-950'
-                  : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-              }`}
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
-
-        {/* User info + logout */}
-        <div className="border-t border-zinc-700 pt-4">
-          <p className="text-sm font-medium text-white truncate">{user?.full_name}</p>
-          <p className="text-xs text-zinc-400 truncate">{user?.email}</p>
-          <p className="mt-1 text-xs font-semibold text-emerald-400">
-            {user?.roles?.name ?? 'Sin rol'}
-          </p>
+    <DashboardLayout
+      title="Gestión de señalización vial"
+      subtitle="Panel administrativo"
+      actions={
+        <>
           <button
-            onClick={handleLogout}
-            className="mt-3 w-full rounded-md border border-zinc-600 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            onClick={fetchDashboardData}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-100"
           >
-            Cerrar sesión
+            Actualizar
           </button>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <main className="lg:pl-64">
-        <header className="border-b border-zinc-200 bg-white">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-            <div>
-              <p className="text-sm font-medium text-emerald-700">Panel administrativo</p>
-              <h2 className="mt-1 text-2xl font-bold text-zinc-950">
-                Gestión de señalización vial
-              </h2>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={fetchDashboardData}
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-100"
-              >
-                Actualizar
-              </button>
-              <a
-                href="/dashboard/signals/new"
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-              >
-                Nueva señal
-              </a>
-            </div>
-          </div>
-        </header>
-
-        <section className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
-          {error && (
+          {(user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR') && (
+            <a
+              href="/dashboard/signals/new"
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Nueva señal
+            </a>
+          )}
+        </>
+      }
+    >
+      {error && (
             <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {error} —{' '}
               <button
@@ -355,8 +292,6 @@ export default function DashboardPage() {
               </div>
             </section>
           </div>
-        </section>
-      </main>
-    </div>
+    </DashboardLayout>
   )
 }

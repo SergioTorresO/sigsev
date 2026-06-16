@@ -13,6 +13,7 @@ declare global {
 export interface JwtPayload {
   userId: string
   role_id: string | null
+  roleName?: string
 }
 
 

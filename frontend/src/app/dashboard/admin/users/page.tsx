@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 interface Role { id: string; name: string; description: string | null }
 interface User {
@@ -27,6 +29,14 @@ const emptyForm = {
 }
 
 export default function AdminUsersPage() {
+  const { user } = useAuth()
+  const router = useRouter()
+
+  // Administración (gestión de usuarios) es exclusivo de ADMIN
+  useEffect(() => {
+    if (user && user.roles?.name !== 'ADMIN') router.replace('/dashboard')
+  }, [user, router])
+
   const [users, setUsers] = useState<User[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)

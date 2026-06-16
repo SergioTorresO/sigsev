@@ -39,6 +39,9 @@ export const requireRole = (...allowedRoleNames: string[]) => {
       return res.status(403).json({ message: 'No tienes permiso para esta acción' })
     }
 
+    // Cachea el nombre del rol en req.user para que los controladores no tengan que volver a consultarlo
+    if (req.user) req.user.roleName = roleName
+
     next()
   }
 }

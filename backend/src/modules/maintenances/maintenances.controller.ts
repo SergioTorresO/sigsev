@@ -42,10 +42,17 @@ export const getOne = async (req: Request, res: Response) => {
   }
 }
 
+const CAN_ASSIGN_ROLES = ['ADMIN', 'SUPERVISOR']
+
 export const create = async (req: Request, res: Response) => {
   try {
     const data = createMaintenanceSchema.parse(req.body)
-    const maintenance = await createMaintenance(data, req.user!.userId)
+
+    // Solo ADMIN/SUPERVISOR pueden asignar el mantenimiento a otro técnico distinto de ellos mismos.
+    const canAssign = CAN_ASSIGN_ROLES.includes(req.user!.roleName ?? '')
+    const assignedTo = canAssign && data.assigned_to ? data.assigned_to : req.user!.userId
+
+    const maintenance = await createMaintenance(data, assignedTo)
     return res.status(201).json(maintenance)
   } catch (error) {
     return handleError(res, error)

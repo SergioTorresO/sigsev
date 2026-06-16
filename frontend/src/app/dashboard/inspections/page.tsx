@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 interface Inspection {
   id: string
@@ -34,6 +36,16 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function InspectionsPage() {
+  const { user } = useAuth()
+  const router = useRouter()
+  const canAssign = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+  const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+
+  // Solo ADMIN/SUPERVISOR tienen este módulo (CONSULTA y TECNICO ya no)
+  useEffect(() => {
+    if (user && user.roles?.name !== 'ADMIN' && user.roles?.name !== 'SUPERVISOR') router.replace('/dashboard')
+  }, [user, router])
+
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -47,7 +59,8 @@ export default function InspectionsPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [signals, setSignals] = useState<{ id: string; signal_code: string }[]>([])
-  const [form, setForm] = useState({ signal_id: '', status: 'BUENO', observations: '', latitude: '', longitude: '' })
+  const [technicians, setTechnicians] = useState<{ id: string; full_name: string }[]>([])
+  const [form, setForm] = useState({ signal_id: '', status: 'BUENO', observations: '', latitude: '', longitude: '', technician_id: '' })
 
   const fetchInspections = useCallback(async () => {
     try {
@@ -73,6 +86,13 @@ export default function InspectionsPage() {
     }
   }, [showForm, signals.length])
 
+  useEffect(() => {
+    if (showForm && canAssign && technicians.length === 0) {
+      api.get<{ data: { id: string; full_name: string }[] }>('/api/users?limit=200&is_active=true')
+        .then((res) => setTechnicians(res.data))
+    }
+  }, [showForm, canAssign, technicians.length])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
@@ -82,9 +102,10 @@ export default function InspectionsPage() {
         ...form,
         latitude: form.latitude ? parseFloat(form.latitude) : undefined,
         longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+        technician_id: canAssign && form.technician_id ? form.technician_id : undefined,
       })
       setShowForm(false)
-      setForm({ signal_id: '', status: 'BUENO', observations: '', latitude: '', longitude: '' })
+      setForm({ signal_id: '', status: 'BUENO', observations: '', latitude: '', longitude: '', technician_id: '' })
       fetchInspections()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al crear inspección')
@@ -100,12 +121,14 @@ export default function InspectionsPage() {
       title="Inspecciones"
       subtitle="Inventario vial"
       actions={
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-        >
-          {showForm ? 'Cancelar' : '+ Nueva inspección'}
-        </button>
+        canWrite ? (
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            {showForm ? 'Cancelar' : '+ Nueva inspección'}
+          </button>
+        ) : undefined
       }
     >
       {/* Inline form */}
@@ -137,6 +160,16 @@ export default function InspectionsPage() {
                 <option value="DESAPARECIDO">Desaparecido</option>
               </select>
             </div>
+            {canAssign && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
+                <select required value={form.technician_id} onChange={(e) => setForm((f) => ({ ...f, technician_id: e.target.value }))}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  <option value="">Seleccionar técnico…</option>
+                  {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700">Latitud GPS</label>
               <input type="number" step="any" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}

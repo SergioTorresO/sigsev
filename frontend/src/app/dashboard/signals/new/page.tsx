@@ -4,14 +4,21 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 interface RefItem { id: string; name: string }
 interface SignalType extends RefItem { code: string | null; category_id: string }
 
 export default function NewSignalPage() {
   const router = useRouter()
+  const { user } = useAuth()
+  const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (user && !canWrite) router.replace('/dashboard/signals')
+  }, [user, canWrite, router])
 
   const [categories, setCategories] = useState<RefItem[]>([])
   const [signalTypes, setSignalTypes] = useState<SignalType[]>([])

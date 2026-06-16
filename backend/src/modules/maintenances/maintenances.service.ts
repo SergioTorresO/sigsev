@@ -6,6 +6,9 @@ export const createMaintenanceSchema = z.object({
   description: z.string().trim().min(1, 'Descripción requerida'),
   cost: z.number().positive().optional(),
   maintenance_date: z.string().optional(),
+  // Solo ADMIN/SUPERVISOR pueden usar este campo para asignar el mantenimiento a otro técnico
+  // (ver maintenances.controller.ts). Si no se envía o el rol no califica, se asigna al creador.
+  assigned_to: z.string().uuid().optional(),
 })
 
 export const updateMaintenanceSchema = z.object({

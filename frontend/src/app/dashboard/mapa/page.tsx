@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { api } from '@/lib/api'
 import type { MapSignal, SignalStatus } from '@/components/MapView'
+import Sidebar from '@/components/Sidebar'
 
 // Load Leaflet only on the client (it uses `window`)
 const MapView = dynamic(() => import('@/components/MapView'), {
@@ -27,15 +28,6 @@ const STATUS_OPTIONS: { value: SignalStatus | ''; label: string; color: string }
   { value: 'DETERIORADO', label: 'Deteriorado', color: 'bg-orange-100 text-orange-700' },
   { value: 'CAIDO', label: 'Caído', color: 'bg-rose-100 text-rose-700' },
   { value: 'DESAPARECIDO', label: 'Desaparecido', color: 'bg-zinc-200 text-zinc-600' },
-]
-
-const navItems = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Mapa GIS', href: '/dashboard/mapa' },
-  { label: 'Señales', href: '/dashboard/signals' },
-  { label: 'Inspecciones', href: '/dashboard/inspections' },
-  { label: 'Mantenimientos', href: '/dashboard/maintenances' },
-  { label: 'Reportes', href: '/dashboard/reportes' },
 ]
 
 export default function MapaPage() {
@@ -83,33 +75,10 @@ export default function MapaPage() {
 
   return (
     <div className="flex min-h-screen bg-zinc-100">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-zinc-200 bg-zinc-950 px-5 py-6 text-white lg:flex lg:flex-col">
-        <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300">
-            Inventario vial
-          </p>
-          <h1 className="mt-2 text-2xl font-bold">SIGSEV</h1>
-        </div>
-        <nav className="space-y-1">
-          {navItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className={`block rounded-md px-3 py-2 text-sm font-medium ${
-                item.href === '/dashboard/mapa'
-                  ? 'bg-white text-zinc-950'
-                  : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-              }`}
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
-      </aside>
+      <Sidebar />
 
       {/* Content */}
-      <div className="flex flex-1 flex-col lg:pl-64">
+      <div className="flex flex-1 flex-col lg:pl-20">
         <header className="border-b border-zinc-200 bg-white px-5 py-4 lg:px-8">
           <div className="flex items-center justify-between">
             <div>

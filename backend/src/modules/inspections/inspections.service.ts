@@ -8,6 +8,9 @@ export const createInspectionSchema = z.object({
   evidence_image: z.string().url().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  // Solo ADMIN/SUPERVISOR pueden usar este campo para asignar la inspección a otro técnico
+  // (ver inspections.controller.ts). Si no se envía o el rol no califica, se asigna al creador.
+  technician_id: z.string().uuid().optional(),
 })
 
 export const updateInspectionSchema = createInspectionSchema.partial().omit({ signal_id: true })

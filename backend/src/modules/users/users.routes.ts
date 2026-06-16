@@ -13,15 +13,17 @@ import {
 
 const router = Router()
 
-// All routes require authentication + ADMIN role
-router.use(verifyToken, requireRole('ADMIN'))
+router.use(verifyToken)
 
-router.get('/', handleGetUsers)
-router.get('/roles', handleGetRoles)
-router.get('/:id', handleGetUserById)
-router.post('/', handleCreateUser)
-router.put('/:id', handleUpdateUser)
-router.patch('/:id/toggle-active', handleToggleActive)
-router.delete('/:id', handleDeleteUser)
+// Lectura: ADMIN y SUPERVISOR (el supervisor necesita ver técnicos para asignarles trabajo)
+router.get('/', requireRole('ADMIN', 'SUPERVISOR'), handleGetUsers)
+router.get('/roles', requireRole('ADMIN', 'SUPERVISOR'), handleGetRoles)
+router.get('/:id', requireRole('ADMIN', 'SUPERVISOR'), handleGetUserById)
+
+// Escritura (crear/editar/activar/eliminar usuarios): solo ADMIN
+router.post('/', requireRole('ADMIN'), handleCreateUser)
+router.put('/:id', requireRole('ADMIN'), handleUpdateUser)
+router.patch('/:id/toggle-active', requireRole('ADMIN'), handleToggleActive)
+router.delete('/:id', requireRole('ADMIN'), handleDeleteUser)
 
 export default router

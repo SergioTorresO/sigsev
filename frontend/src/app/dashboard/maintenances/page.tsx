@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 interface Maintenance {
   id: string
@@ -33,6 +35,16 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function MaintenancesPage() {
+  const { user } = useAuth()
+  const router = useRouter()
+  const canAssign = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+  const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+
+  // Solo ADMIN/SUPERVISOR tienen este módulo (CONSULTA y TECNICO ya no)
+  useEffect(() => {
+    if (user && user.roles?.name !== 'ADMIN' && user.roles?.name !== 'SUPERVISOR') router.replace('/dashboard')
+  }, [user, router])
+
   const [maintenances, setMaintenances] = useState<Maintenance[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -45,7 +57,8 @@ export default function MaintenancesPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [signals, setSignals] = useState<{ id: string; signal_code: string }[]>([])
-  const [form, setForm] = useState({ signal_id: '', description: '', cost: '', maintenance_date: '' })
+  const [technicians, setTechnicians] = useState<{ id: string; full_name: string }[]>([])
+  const [form, setForm] = useState({ signal_id: '', description: '', cost: '', maintenance_date: '', assigned_to: '' })
 
   const fetchMaintenances = useCallback(async () => {
     try {
@@ -71,6 +84,13 @@ export default function MaintenancesPage() {
     }
   }, [showForm, signals.length])
 
+  useEffect(() => {
+    if (showForm && canAssign && technicians.length === 0) {
+      api.get<{ data: { id: string; full_name: string }[] }>('/api/users?limit=200&is_active=true')
+        .then((res) => setTechnicians(res.data))
+    }
+  }, [showForm, canAssign, technicians.length])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
@@ -80,9 +100,10 @@ export default function MaintenancesPage() {
         ...form,
         cost: form.cost ? parseFloat(form.cost) : undefined,
         maintenance_date: form.maintenance_date || undefined,
+        assigned_to: canAssign && form.assigned_to ? form.assigned_to : undefined,
       })
       setShowForm(false)
-      setForm({ signal_id: '', description: '', cost: '', maintenance_date: '' })
+      setForm({ signal_id: '', description: '', cost: '', maintenance_date: '', assigned_to: '' })
       fetchMaintenances()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al crear mantenimiento')
@@ -107,12 +128,14 @@ export default function MaintenancesPage() {
       title="Mantenimientos"
       subtitle="Inventario vial"
       actions={
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-        >
-          {showForm ? 'Cancelar' : '+ Nuevo mantenimiento'}
-        </button>
+        canWrite ? (
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            {showForm ? 'Cancelar' : '+ Nuevo mantenimiento'}
+          </button>
+        ) : undefined
       }
     >
       {/* Inline form */}
@@ -138,6 +161,16 @@ export default function MaintenancesPage() {
               <input type="date" value={form.maintenance_date} onChange={(e) => setForm((f) => ({ ...f, maintenance_date: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
+            {canAssign && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
+                <select required value={form.assigned_to} onChange={(e) => setForm((f) => ({ ...f, assigned_to: e.target.value }))}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  <option value="">Seleccionar técnico…</option>
+                  {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700">Costo estimado (COP)</label>
               <input type="number" min="0" step="1000" value={form.cost} onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
@@ -221,7 +254,7 @@ export default function MaintenancesPage() {
                       {m.cost ? `$${Number(m.cost).toLocaleString('es-CO')}` : '—'}
                     </td>
                     <td className="px-5 py-4">
-                      {m.status !== 'COMPLETADO' && (
+                      {canWrite && m.status !== 'COMPLETADO' && (
                         <select
                           defaultValue={m.status}
                           onChange={(e) => handleStatusChange(m.id, e.target.value)}
@@ -232,11 +265,13 @@ export default function MaintenancesPage() {
                           <option value="COMPLETADO">Completado</option>
                         </select>
                       )}
-                      {m.status === 'COMPLETADO' && (
+                      {(!canWrite || m.status === 'COMPLETADO') && (
                         <span className="text-xs text-zinc-400">
-                          {m.completed_at
-                            ? new Date(m.completed_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
-                            : 'Completado'}
+                          {m.status === 'COMPLETADO'
+                            ? (m.completed_at
+                                ? new Date(m.completed_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
+                                : 'Completado')
+                            : STATUS_LABELS[m.status]}
                         </span>
                       )}
                     </td>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 interface Signal {
   id: string
@@ -45,6 +46,13 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function SignalsPage() {
   const router = useRouter()
+  const { user } = useAuth()
+  const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+
+  useEffect(() => {
+    if (user && user.roles?.name === 'CONSULTA') router.replace('/dashboard')
+  }, [user, router])
+
   const [signals, setSignals] = useState<Signal[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -102,12 +110,14 @@ export default function SignalsPage() {
       title="Señales"
       subtitle="Inventario vial"
       actions={
-        <a
-          href="/dashboard/signals/new"
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-        >
-          + Nueva señal
-        </a>
+        canWrite ? (
+          <a
+            href="/dashboard/signals/new"
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            + Nueva señal
+          </a>
+        ) : undefined
       }
     >
       {/* Filters */}
@@ -209,13 +219,15 @@ export default function SignalsPage() {
                         >
                           Ver
                         </button>
-                        <button
-                          onClick={() => router.push(`/dashboard/signals/${signal.id}/edit`)}
-                          className="text-zinc-600 hover:underline text-xs font-medium"
-                        >
-                          Editar
-                        </button>
-                        {signal.is_active && (
+                        {canWrite && (
+                          <button
+                            onClick={() => router.push(`/dashboard/signals/${signal.id}/edit`)}
+                            className="text-zinc-600 hover:underline text-xs font-medium"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        {canWrite && signal.is_active && (
                           <button
                             onClick={() => handleDeactivate(signal.id)}
                             className="text-rose-500 hover:underline text-xs font-medium"

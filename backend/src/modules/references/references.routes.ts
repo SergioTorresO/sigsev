@@ -5,9 +5,19 @@ import { verifyToken } from '../../middlewares/auth.middleware'
 const router = Router()
 router.use(verifyToken)
 
-router.get('/municipalities', async (_req: Request, res: Response) => {
+router.get('/departments', async (_req: Request, res: Response) => {
   const { data, error } = await supabase
-    .from('municipalities').select('id, name').order('name')
+    .from('departments').select('id, name').order('name')
+  if (error) return res.status(500).json({ message: error.message })
+  return res.json(data)
+})
+
+router.get('/municipalities', async (req: Request, res: Response) => {
+  let query = supabase.from('municipalities').select('id, name, department_id').order('name')
+  if (req.query.department_id) {
+    query = query.eq('department_id', req.query.department_id as string)
+  }
+  const { data, error } = await query
   if (error) return res.status(500).json({ message: error.message })
   return res.json(data)
 })

@@ -22,6 +22,7 @@ export default function NewSignalPage() {
 
   const [categories, setCategories] = useState<RefItem[]>([])
   const [signalTypes, setSignalTypes] = useState<SignalType[]>([])
+  const [departments, setDepartments] = useState<RefItem[]>([])
   const [municipalities, setMunicipalities] = useState<RefItem[]>([])
   const [zones, setZones] = useState<RefItem[]>([])
 
@@ -29,6 +30,7 @@ export default function NewSignalPage() {
     signal_code: '',
     category_id: '',
     signal_type_id: '',
+    department_id: '',
     municipality_id: '',
     zone_id: '',
     status: 'BUENO',
@@ -43,10 +45,10 @@ export default function NewSignalPage() {
   useEffect(() => {
     Promise.all([
       api.get<RefItem[]>('/api/ref/categories'),
-      api.get<RefItem[]>('/api/ref/municipalities'),
-    ]).then(([cats, munis]) => {
+      api.get<RefItem[]>('/api/ref/departments'),
+    ]).then(([cats, deps]) => {
       setCategories(cats)
-      setMunicipalities(munis)
+      setDepartments(deps)
     })
   }, [])
 
@@ -55,6 +57,12 @@ export default function NewSignalPage() {
     api.get<SignalType[]>(`/api/ref/signal-types?category_id=${form.category_id}`)
       .then(setSignalTypes)
   }, [form.category_id])
+
+  useEffect(() => {
+    if (!form.department_id) { setMunicipalities([]); return }
+    api.get<RefItem[]>(`/api/ref/municipalities?department_id=${form.department_id}`)
+      .then(setMunicipalities)
+  }, [form.department_id])
 
   useEffect(() => {
     if (!form.municipality_id) { setZones([]); return }
@@ -71,8 +79,9 @@ export default function NewSignalPage() {
     setLoading(true)
 
     try {
+      const { department_id: _department_id, ...rest } = form
       await api.post('/api/signals', {
-        ...form,
+        ...rest,
         latitude: parseFloat(form.latitude),
         longitude: parseFloat(form.longitude),
         category_id: form.category_id || undefined,
@@ -147,9 +156,19 @@ export default function NewSignalPage() {
             </div>
 
             <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-700">Departamento</label>
+              <select value={form.department_id} onChange={(e) => { set('department_id', e.target.value); set('municipality_id', ''); set('zone_id', '') }}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                <option value="">Sin departamento</option>
+                {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+
+            <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
               <select value={form.municipality_id} onChange={(e) => { set('municipality_id', e.target.value); set('zone_id', '') }}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                disabled={!form.department_id}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50">
                 <option value="">Sin municipio</option>
                 {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>

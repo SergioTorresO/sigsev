@@ -1,7 +1,9 @@
 import supabase from '../../lib/supabase'
 import bcrypt from 'bcryptjs'
 import * as jwt from 'jsonwebtoken'
+import * as crypto from 'crypto'
 import { z } from 'zod'
+import { isEmailConfigured, sendPasswordResetEmail } from '../../lib/email'
 
 export const registerSchema = z.object({
   full_name: z.string().trim().min(3, 'El nombre es muy corto'),
@@ -17,8 +19,19 @@ export const loginSchema = z.object({
   password: z.string().min(6, 'Contraseña invalida'),
 })
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email('Correo invalido').toLowerCase(),
+})
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token requerido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+})
+
 type RegisterDTO = z.infer<typeof registerSchema>
 type LoginDTO = z.infer<typeof loginSchema>
+type ForgotPasswordDTO = z.infer<typeof forgotPasswordSchema>
+type ResetPasswordDTO = z.infer<typeof resetPasswordSchema>
 
 export const registerUser = async ({
   full_name, email, password, phone, role_id, municipality,
@@ -83,4 +96,79 @@ export const loginUser = async ({ email, password }: LoginDTO) => {
 
   const { password: _pw, ...safeUser } = user
   return { token, user: safeUser }
+}
+
+export const requestPasswordReset = async ({ email }: ForgotPasswordDTO) => {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, is_active')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+
+  // No revelamos si el correo existe o no (evita enumeración de usuarios).
+  if (!user || !user.is_active) {
+    return { message: 'Si el correo existe, se generó un enlace de recuperación' }
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex')
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+  const expires = new Date(Date.now() + 1000 * 60 * 60) // 1 hora
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ reset_token: hashedToken, reset_token_expires: expires.toISOString() })
+    .eq('id', user.id)
+
+  if (updateError) throw new Error(updateError.message)
+
+  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000'
+  const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`
+
+  if (isEmailConfigured()) {
+    await sendPasswordResetEmail(email, resetLink)
+    return { message: 'Si el correo existe, se envió un enlace de recuperación' }
+  }
+
+  // Sin RESEND_API_KEY configurada: modo desarrollo, devolvemos el enlace
+  // directamente en la respuesta para poder probar el flujo sin correo real.
+  return {
+    message: 'Si el correo existe, se generó un enlace de recuperación (modo desarrollo, sin email configurado)',
+    resetLink,
+  }
+}
+
+export const resetPassword = async ({ token, password }: ResetPasswordDTO) => {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, reset_token_expires')
+    .eq('reset_token', hashedToken)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!user) throw new Error('Token inválido o expirado')
+
+  const expires = user.reset_token_expires ? new Date(user.reset_token_expires as string) : null
+  if (!expires || expires.getTime() < Date.now()) {
+    throw new Error('Token inválido o expirado')
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({
+      password: hashedPassword,
+      reset_token: null,
+      reset_token_expires: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (updateError) throw new Error(updateError.message)
+
+  return { message: 'Contraseña actualizada correctamente' }
 }

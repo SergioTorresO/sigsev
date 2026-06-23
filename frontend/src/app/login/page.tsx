@@ -74,9 +74,8 @@ export default function LoginPage() {
         </button>
 
         <p className="text-center text-sm text-zinc-500">
-          ¿No tienes cuenta?{' '}
-          <a href="/register" className="text-emerald-600 hover:underline">
-            Regístrate
+          <a href="/forgot-password" className="text-emerald-600 hover:underline">
+            ¿Olvidaste tu contraseña?
           </a>
         </p>
       </form>

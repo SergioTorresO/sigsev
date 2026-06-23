@@ -4,8 +4,12 @@ import { ZodError } from 'zod'
 import {
   registerUser,
   loginUser,
+  requestPasswordReset,
+  resetPassword,
   registerSchema,
   loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from './auth.service'
 
 const getErrorMessage = (error: unknown) => {
@@ -92,4 +96,56 @@ export const login = async (
           : 'Error interno',
     })
   }
+}
+
+export const forgotPassword = async (
+  req: Request,
+  res: Response
+) => {
+
+  try {
+
+    const { email } = forgotPasswordSchema.parse(req.body)
+    const data = await requestPasswordReset({ email })
+
+    return res.status(200).json(data)
+
+  } catch (error) {
+
+    if (error instanceof ZodError) {
+      return res.status(422).json({ message: getErrorMessage(error) })
+    }
+
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : 'Error interno',
+    })
+
+  }
+
+}
+
+export const resetPasswordHandler = async (
+  req: Request,
+  res: Response
+) => {
+
+  try {
+
+    const { token, password } = resetPasswordSchema.parse(req.body)
+    const data = await resetPassword({ token, password })
+
+    return res.status(200).json(data)
+
+  } catch (error) {
+
+    if (error instanceof ZodError) {
+      return res.status(422).json({ message: getErrorMessage(error) })
+    }
+
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : 'Error interno',
+    })
+
+  }
+
 }

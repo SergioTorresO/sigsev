@@ -10,6 +10,17 @@ type FetchOptions = Omit<RequestInit, 'headers'> & {
   auth?: boolean // default true — attach Bearer token
 }
 
+// Error enriquecido con el body completo de la respuesta (útil para
+// endpoints que devuelven detalle estructurado, p.ej. errores por fila
+// en la carga masiva: { message, errors: [{ row, message }] }).
+export class ApiError extends Error {
+  details: unknown
+  constructor(message: string, details: unknown) {
+    super(message)
+    this.details = details
+  }
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: FetchOptions = {}
@@ -20,9 +31,12 @@ export async function apiFetch<T = unknown>(
   const authHeader: Record<string, string> =
     auth && token ? { Authorization: `Bearer ${token}` } : {}
 
+  // Para FormData dejamos que el navegador fije el Content-Type (con boundary)
+  const isFormData = typeof FormData !== 'undefined' && rest.body instanceof FormData
+
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...authHeader,
       ...headers,
     },
@@ -32,7 +46,7 @@ export async function apiFetch<T = unknown>(
   const data = await res.json()
 
   if (!res.ok) {
-    throw new Error(data.message ?? `Error ${res.status}`)
+    throw new ApiError(data.message ?? `Error ${res.status}`, data)
   }
 
   return data as T
@@ -45,6 +59,8 @@ export const api = {
     apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body), auth }),
   put: <T>(path: string, body: unknown) =>
     apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  postForm: <T>(path: string, formData: FormData) =>
+    apiFetch<T>(path, { method: 'POST', body: formData }),
   patch: <T>(path: string, body: unknown) =>
     apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),

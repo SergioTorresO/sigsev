@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
 interface Signal {
@@ -26,6 +26,31 @@ interface SignalsResponse {
   total: number
   page: number
   limit: number
+}
+
+interface BulkImportRowError {
+  row: number
+  message: string
+}
+
+interface BulkImportResponse {
+  inserted?: number
+  message?: string
+  errors?: BulkImportRowError[]
+}
+
+const TEMPLATE_CSV = `codigo,direccion,categoria,tipo_senal,municipio,zona,estado,descripcion,observaciones,fecha_instalacion,latitud,longitud
+SE-0001,Calle 10 # 5-20,Preventivas,Curva peligrosa,Itagüí,Urbana,BUENO,,,2024-01-15,6.1719,-75.6062
+`
+
+function downloadTemplate() {
+  const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'plantilla_señales.csv'
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -62,6 +87,12 @@ export default function SignalsPage() {
   const [search, setSearch] = useState('')
   const LIMIT = 15
 
+  const [showImport, setShowImport] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importErrors, setImportErrors] = useState<BulkImportRowError[]>([])
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
+
   const fetchSignals = useCallback(async () => {
     try {
       setLoading(true)
@@ -84,13 +115,57 @@ export default function SignalsPage() {
 
   useEffect(() => { fetchSignals() }, [fetchSignals])
 
-  const handleDeactivate = async (id: string) => {
-    if (!confirm('¿Desactivar esta señal?')) return
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  const handleToggleActive = async (signal: Signal) => {
+    setTogglingId(signal.id)
     try {
-      await api.delete(`/api/signals/${id}`)
-      fetchSignals()
+      await api.patch(`/api/signals/${signal.id}/toggle-active`, {})
+      setSignals((prev) =>
+        prev.map((s) => (s.id === signal.id ? { ...s, is_active: !s.is_active } : s))
+      )
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  const closeImport = () => {
+    setShowImport(false)
+    setImportFile(null)
+    setImportErrors([])
+    setImportSuccess(null)
+  }
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!importFile) return
+
+    setImporting(true)
+    setImportErrors([])
+    setImportSuccess(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      const res = await api.postForm<BulkImportResponse>('/api/signals/bulk-import', formData)
+      setImportSuccess(`Se importaron ${res.inserted ?? 0} señales correctamente.`)
+      setImportFile(null)
+      fetchSignals()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const details = err.details as { errors?: BulkImportRowError[] }
+        if (details.errors && details.errors.length > 0) {
+          setImportErrors(details.errors)
+        } else {
+          setImportErrors([{ row: 0, message: err.message }])
+        }
+      } else if (err instanceof Error) {
+        setImportErrors([{ row: 0, message: err.message }])
+      }
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -111,12 +186,20 @@ export default function SignalsPage() {
       subtitle="Inventario vial"
       actions={
         canWrite ? (
-          <a
-            href="/dashboard/signals/new"
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-          >
-            + Nueva señal
-          </a>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Importar CSV/Excel
+            </button>
+            <a
+              href="/dashboard/signals/new"
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              + Nueva señal
+            </a>
+          </div>
         ) : undefined
       }
     >
@@ -171,6 +254,7 @@ export default function SignalsPage() {
                 <th className="px-5 py-3 font-semibold">Municipio</th>
                 <th className="px-5 py-3 font-semibold">Categoría</th>
                 <th className="px-5 py-3 font-semibold">Estado</th>
+                {canWrite && <th className="px-5 py-3 font-semibold">Activa</th>}
                 <th className="px-5 py-3 font-semibold">Acciones</th>
               </tr>
             </thead>
@@ -178,7 +262,7 @@ export default function SignalsPage() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: canWrite ? 7 : 6 }).map((_, j) => (
                       <td key={j} className="px-5 py-4">
                         <div className="h-4 animate-pulse rounded bg-zinc-100" />
                       </td>
@@ -187,13 +271,13 @@ export default function SignalsPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-zinc-400">
+                  <td colSpan={canWrite ? 7 : 6} className="px-5 py-10 text-center text-zinc-400">
                     No hay señales registradas
                   </td>
                 </tr>
               ) : (
                 filtered.map((signal) => (
-                  <tr key={signal.id} className="hover:bg-zinc-50">
+                  <tr key={signal.id} className={`hover:bg-zinc-50 ${!signal.is_active ? 'opacity-50' : ''}`}>
                     <td className="px-5 py-4 font-semibold text-zinc-950">
                       {signal.signal_code}
                     </td>
@@ -211,6 +295,27 @@ export default function SignalsPage() {
                         {STATUS_LABELS[signal.status]}
                       </span>
                     </td>
+                    {canWrite && (
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={signal.is_active}
+                          disabled={togglingId === signal.id}
+                          onClick={() => handleToggleActive(signal)}
+                          title={signal.is_active ? 'Desactivar señal' : 'Activar señal'}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${
+                            signal.is_active ? 'bg-emerald-600' : 'bg-zinc-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              signal.is_active ? 'translate-x-4' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </td>
+                    )}
                     <td className="px-5 py-4">
                       <div className="flex gap-3">
                         <button
@@ -225,14 +330,6 @@ export default function SignalsPage() {
                             className="text-zinc-600 hover:underline text-xs font-medium"
                           >
                             Editar
-                          </button>
-                        )}
-                        {canWrite && signal.is_active && (
-                          <button
-                            onClick={() => handleDeactivate(signal.id)}
-                            className="text-rose-500 hover:underline text-xs font-medium"
-                          >
-                            Desactivar
                           </button>
                         )}
                       </div>
@@ -269,6 +366,81 @@ export default function SignalsPage() {
           </div>
         )}
       </div>
+
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-zinc-950">Importar señales</h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Sube un archivo CSV o Excel (.xlsx). Si alguna fila tiene un error, no se
+                  importa ninguna señal del archivo.
+                </p>
+              </div>
+              <button onClick={closeImport} className="text-zinc-400 hover:text-zinc-600">
+                ✕
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={downloadTemplate}
+              className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+            >
+              Descargar plantilla de ejemplo (.csv)
+            </button>
+
+            {importSuccess && (
+              <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {importSuccess}
+              </div>
+            )}
+
+            {importErrors.length > 0 && (
+              <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <p className="mb-1 font-semibold">
+                  No se importó nada. Corrige estas filas e inténtalo de nuevo:
+                </p>
+                <ul className="list-inside list-disc space-y-1">
+                  {importErrors.map((e, i) => (
+                    <li key={i}>
+                      {e.row > 0 ? `Fila ${e.row}: ` : ''}
+                      {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                className="rounded-md border border-zinc-300 p-2 text-sm"
+              />
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeImport}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!importFile || importing}
+                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {importing ? 'Importando...' : 'Importar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }

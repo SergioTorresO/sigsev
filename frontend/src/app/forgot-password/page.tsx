@@ -29,8 +29,8 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100">
-      <div className="flex w-[400px] flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-4">
+      <div className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
             Inventario vial

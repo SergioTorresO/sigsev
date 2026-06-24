@@ -46,6 +46,17 @@ export async function apiFetch<T = unknown>(
   const data = await res.json()
 
   if (!res.ok) {
+    // Si la llamada llevaba un token y el backend la rechazó con 401, la sesión
+    // expiró o el usuario fue desactivado. Limpiamos todo y mandamos a /login
+    // con un mensaje claro en vez de dejar cada página mostrando un error genérico.
+    if (res.status === 401 && auth && token && typeof window !== 'undefined') {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      document.cookie = 'token=; path=/; max-age=0'
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login?expired=1'
+      }
+    }
     throw new ApiError(data.message ?? `Error ${res.status}`, data)
   }
 

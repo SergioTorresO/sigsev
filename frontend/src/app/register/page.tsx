@@ -40,10 +40,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center p-4">
       <form
         onSubmit={handleRegister}
-        className="flex w-[400px] flex-col gap-4 rounded-lg border p-8"
+        className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border p-6 sm:p-8"
       >
         <h1 className="text-2xl font-bold">
           Registro SIGSEV

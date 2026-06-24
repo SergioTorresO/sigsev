@@ -249,19 +249,19 @@ export default function ZonasPage() {
 
   return (
     <DashboardLayout title="Zonas" subtitle="Catálogo">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <input
             type="text"
             placeholder="Buscar por nombre…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
           />
           <select
             value={municipalityFilter}
             onChange={(e) => { setMunicipalityFilter(e.target.value); setPage(1) }}
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
           >
             <option value="">Todos los municipios</option>
             {municipalityOptionsForFilter.map((m) => (
@@ -269,7 +269,7 @@ export default function ZonasPage() {
             ))}
           </select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setShowImport(true)}
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"

@@ -90,7 +90,7 @@ export default function AdminAuditPage() {
         <select
           value={tableFilter}
           onChange={(e) => { setTableFilter(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
         >
           <option value="">Todas las tablas</option>
           <option value="signals">Señales</option>
@@ -102,7 +102,7 @@ export default function AdminAuditPage() {
         <select
           value={actionFilter}
           onChange={(e) => { setActionFilter(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
         >
           <option value="">Todas las acciones</option>
           {Object.entries(ACTION_LABELS).map(([value, label]) => (

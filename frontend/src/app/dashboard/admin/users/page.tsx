@@ -247,15 +247,15 @@ export default function AdminUsersPage() {
         <input
           type="text" placeholder="Buscar nombre o correo…" value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none w-56"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-56"
         />
         <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos los roles</option>
           {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
         <select value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos</option>
           <option value="true">Activos</option>
           <option value="false">Inactivos</option>

@@ -1,17 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const { login } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') setSessionExpired(true)
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,17 +36,17 @@ export default function LoginPage() {
       await login(email, password)
       router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesion')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-4">
       <form
         onSubmit={handleLogin}
-        className="flex w-[400px] flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-8 shadow-sm"
+        className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
       >
         <div className="mb-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
@@ -40,6 +54,12 @@ export default function LoginPage() {
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-950">SIGSEV</h1>
         </div>
+
+        {sessionExpired && !error && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Tu sesion expiro. Vuelve a iniciar sesion.
+          </div>
+        )}
 
         {error && (
           <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
@@ -49,7 +69,7 @@ export default function LoginPage() {
 
         <input
           type="email"
-          placeholder="Correo electrónico"
+          placeholder="Correo electronico"
           className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -58,7 +78,7 @@ export default function LoginPage() {
 
         <input
           type="password"
-          placeholder="Contraseña"
+          placeholder="Contrasena"
           className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -75,7 +95,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-zinc-500">
           <a href="/forgot-password" className="text-emerald-600 hover:underline">
-            ¿Olvidaste tu contraseña?
+            Olvidaste tu contrasena?
           </a>
         </p>
       </form>

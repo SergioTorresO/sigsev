@@ -198,7 +198,7 @@ export default function InspectionsPage() {
       {/* Filters */}
       <div className="mb-4 flex gap-3">
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos los estados</option>
           <option value="BUENO">Bueno</option>
           <option value="REGULAR">Regular</option>

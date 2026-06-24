@@ -93,6 +93,17 @@ export default function SignalsPage() {
   const [importErrors, setImportErrors] = useState<BulkImportRowError[]>([])
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
+  // Debounce del término de búsqueda: evita disparar una petición al backend
+  // en cada tecla. El filtrado ya no se hace en el cliente (solo afectaba a la
+  // página de 15 resultados cargada en memoria, no a todo el inventario).
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => { setPage(1) }, [debouncedSearch, statusFilter])
+
   const fetchSignals = useCallback(async () => {
     try {
       setLoading(true)
@@ -102,6 +113,7 @@ export default function SignalsPage() {
         limit: String(LIMIT),
       })
       if (statusFilter) params.set('status', statusFilter)
+      if (debouncedSearch) params.set('search', debouncedSearch)
 
       const res = await api.get<SignalsResponse>(`/api/signals?${params}`)
       setSignals(res.data)
@@ -111,13 +123,20 @@ export default function SignalsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, statusFilter])
+  }, [page, statusFilter, debouncedSearch])
 
   useEffect(() => { fetchSignals() }, [fetchSignals])
 
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
   const handleToggleActive = async (signal: Signal) => {
+    // Desactivar una señal la oculta de las vistas operativas (mapa, asignación
+    // de inspecciones/mantenimientos); confirmamos antes solo en ese sentido —
+    // reactivar es seguro y no necesita confirmación.
+    if (signal.is_active && !window.confirm(`¿Desactivar la señal "${signal.signal_code}"? Dejará de aparecer en el mapa y en las vistas operativas.`)) {
+      return
+    }
+
     setTogglingId(signal.id)
     try {
       await api.patch(`/api/signals/${signal.id}/toggle-active`, {})
@@ -169,15 +188,6 @@ export default function SignalsPage() {
     }
   }
 
-  const filtered = search
-    ? signals.filter(
-        (s) =>
-          s.signal_code.toLowerCase().includes(search.toLowerCase()) ||
-          (s.address ?? '').toLowerCase().includes(search.toLowerCase()) ||
-          (s.municipalities?.name ?? '').toLowerCase().includes(search.toLowerCase())
-      )
-    : signals
-
   const totalPages = Math.ceil(total / LIMIT)
 
   return (
@@ -186,16 +196,16 @@ export default function SignalsPage() {
       subtitle="Inventario vial"
       actions={
         canWrite ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowImport(true)}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 sm:px-4"
             >
               Importar CSV/Excel
             </button>
             <a
               href="/dashboard/signals/new"
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:px-4"
             >
               + Nueva señal
             </a>
@@ -207,15 +217,15 @@ export default function SignalsPage() {
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           type="text"
-          placeholder="Buscar por código, dirección, municipio…"
-          className="w-72 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          placeholder="Buscar por código o dirección…"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 sm:w-72"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 sm:w-auto"
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+          onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="">Todos los estados</option>
           <option value="BUENO">Bueno</option>
@@ -225,8 +235,8 @@ export default function SignalsPage() {
           <option value="DESAPARECIDO">Desaparecido</option>
         </select>
         <button
-          onClick={() => { setPage(1); fetchSignals() }}
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          onClick={() => fetchSignals()}
+          className="w-full rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 sm:w-auto"
         >
           Actualizar
         </button>
@@ -269,14 +279,14 @@ export default function SignalsPage() {
                     ))}
                   </tr>
                 ))
-              ) : filtered.length === 0 ? (
+              ) : signals.length === 0 ? (
                 <tr>
                   <td colSpan={canWrite ? 7 : 6} className="px-5 py-10 text-center text-zinc-400">
-                    No hay señales registradas
+                    No hay señales que coincidan con la búsqueda
                   </td>
                 </tr>
               ) : (
-                filtered.map((signal) => (
+                signals.map((signal) => (
                   <tr key={signal.id} className={`hover:bg-zinc-50 ${!signal.is_active ? 'opacity-50' : ''}`}>
                     <td className="px-5 py-4 font-semibold text-zinc-950">
                       {signal.signal_code}

@@ -29,6 +29,7 @@ export const signalFiltersSchema = z.object({
   zone_id: z.string().uuid().optional(),
   category_id: z.string().uuid().optional(),
   is_active: z.string().transform((v) => v === 'true').optional(),
+  search: z.string().trim().optional(),
   page: z.string().transform(Number).optional(),
   limit: z.string().transform(Number).optional(),
 })
@@ -48,8 +49,14 @@ const SIGNAL_SELECT = `
   users(id, full_name)
 `
 
+// Caracteres especiales de PostgREST que podrían alterar el filtro `.or()`
+// si vinieran tal cual del término de búsqueda del usuario (p.ej. una coma
+// cerraría el primer término antes de tiempo, un paréntesis rompería la
+// sintaxis). Se escapan para que el término se trate siempre como texto literal.
+const escapeOrFilterValue = (value: string) => value.replace(/[,()%]/g, (c) => `\\${c}`)
+
 export const getSignals = async (filters: SignalFilters) => {
-  const { status, municipality_id, zone_id, category_id, is_active, page = 1, limit = 20 } = filters
+  const { status, municipality_id, zone_id, category_id, is_active, search, page = 1, limit = 20 } = filters
 
   let query = supabase
     .from('signals')
@@ -62,6 +69,14 @@ export const getSignals = async (filters: SignalFilters) => {
   if (zone_id) query = query.eq('zone_id', zone_id)
   if (category_id) query = query.eq('category_id', category_id)
   if (is_active !== undefined) query = query.eq('is_active', is_active)
+  if (search) {
+    // Búsqueda en servidor por código o dirección (los únicos campos de texto
+    // libre relevantes en signals) — antes el filtro de texto solo se aplicaba
+    // sobre la página ya cargada en el cliente, así que no encontraba nada
+    // fuera de esa página.
+    const term = escapeOrFilterValue(search)
+    query = query.or(`signal_code.ilike.%${term}%,address.ilike.%${term}%`)
+  }
 
   const { data, error, count } = await query
   if (error) throw new Error(error.message)

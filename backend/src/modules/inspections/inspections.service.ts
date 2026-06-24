@@ -71,23 +71,31 @@ export const getInspectionById = async (id: string) => {
 }
 
 export const createInspection = async (data: CreateInspectionDTO, technicianId: string) => {
-  const { data: signal } = await supabase
-    .from('signals').select('id').eq('id', data.signal_id).maybeSingle()
-  if (!signal) throw new Error('Señal no encontrada')
+  // RPC transaccional: inserta la inspección y actualiza signals.status en una sola
+  // transacción de Postgres, evitando que la señal quede con un status desincronizado
+  // si el segundo paso fallara (antes eran dos llamadas independientes sin atomicidad).
+  const { data: inspectionId, error: rpcError } = await supabase.rpc(
+    'create_inspection_with_signal_update',
+    {
+      p_signal_id: data.signal_id,
+      p_technician_id: technicianId,
+      p_status: data.status,
+      p_observations: data.observations ?? null,
+      p_evidence_image: data.evidence_image ?? null,
+      p_latitude: data.latitude ?? null,
+      p_longitude: data.longitude ?? null,
+    }
+  )
+
+  if (rpcError) throw new Error(rpcError.message)
 
   const { data: inspection, error } = await supabase
     .from('inspections')
-    .insert({ ...data, technician_id: technicianId })
     .select(INSPECTION_SELECT)
+    .eq('id', inspectionId as string)
     .single()
 
   if (error) throw new Error(error.message)
-
-  // Update signal status
-  await supabase
-    .from('signals')
-    .update({ status: data.status, updated_at: new Date().toISOString() })
-    .eq('id', data.signal_id)
 
   if (BAD_STATUSES.includes(data.status)) {
     const signalCode = (inspection as { signals?: { signal_code?: string } | null }).signals?.signal_code ?? data.signal_id

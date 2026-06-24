@@ -113,6 +113,12 @@ export default function MaintenancesPage() {
   }
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    // Marcar como completado es irreversible desde la UI (el select desaparece
+    // y ya no se puede volver a "Pendiente"/"En proceso"), así que se confirma antes.
+    if (newStatus === 'COMPLETADO' && !window.confirm('¿Marcar este mantenimiento como completado? No podrás cambiar su estado después.')) {
+      return
+    }
+
     try {
       await api.put(`/api/maintenances/${id}`, { status: newStatus })
       fetchMaintenances()
@@ -194,7 +200,7 @@ export default function MaintenancesPage() {
       {/* Filters */}
       <div className="mb-4 flex gap-3">
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
           <option value="EN_PROCESO">En proceso</option>
@@ -256,7 +262,7 @@ export default function MaintenancesPage() {
                     <td className="px-5 py-4">
                       {canWrite && m.status !== 'COMPLETADO' && (
                         <select
-                          defaultValue={m.status}
+                          value={m.status}
                           onChange={(e) => handleStatusChange(m.id, e.target.value)}
                           className="rounded-md border border-zinc-300 px-2 py-1 text-xs focus:border-emerald-500 focus:outline-none"
                         >

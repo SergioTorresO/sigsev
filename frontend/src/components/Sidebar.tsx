@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 
@@ -41,14 +42,24 @@ const adminItems = [
   { label: 'Auditoría', href: '/dashboard/admin/audit' },
 ]
 
-// Sidebar global: colapsado a iconos (w-20), se expande al pasar el cursor (hover:w-64).
+// Sidebar global: colapsado a iconos (w-20), se expande al pasar el cursor (hover:w-64) en
+// escritorio (>=1024px, breakpoint `lg`). Por debajo de ese ancho el hover no existe (touch),
+// así que se muestra una barra superior con botón de menú que abre un drawer a pantalla completa
+// con las mismas opciones, siempre con etiquetas visibles (sin depender de hover).
 // Se usa en TODAS las páginas del dashboard, sin importar el rol del usuario.
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Cierra el drawer móvil automáticamente al navegar a otra página
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
 
   const handleLogout = () => {
+    setMobileOpen(false)
     logout()
     router.push('/login')
   }
@@ -67,7 +78,126 @@ export default function Sidebar() {
     : navItems
 
   return (
-    <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-hidden border-r border-zinc-200 bg-zinc-950 px-3 py-6 text-white transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
+    <>
+      {/* Barra superior móvil/tablet (<1024px) */}
+      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200 bg-zinc-950 px-4 text-white lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Abrir menú de navegación"
+          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-zinc-800"
+        >
+          <Icon path="M4 6h16M4 12h16M4 18h16" className="h-6 w-6" />
+        </button>
+        <span className="text-lg font-bold">SIGSEV</span>
+        <span className="h-9 w-9" />
+      </header>
+
+      {/* Fondo oscuro tras el drawer móvil */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Drawer móvil/tablet: mismas opciones que el sidebar de escritorio, siempre expandido */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-zinc-200 bg-zinc-950 px-5 py-6 text-white transition-transform duration-200 ease-in-out lg:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300">
+              Inventario vial
+            </p>
+            <h1 className="mt-1 text-2xl font-bold">SIGSEV</h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Cerrar menú de navegación"
+            className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-zinc-800"
+          >
+            <Icon path="M6 6l12 12M18 6 6 18" className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-1">
+          {visibleNavItems.map((item) => {
+            const isActive =
+              item.href === '/dashboard'
+                ? pathname === '/dashboard'
+                : pathname.startsWith(item.href)
+            return (
+              <a
+                key={item.label}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
+                  isActive ? 'bg-white text-zinc-950' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                }`}
+              >
+                <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
+                <span>{item.label}</span>
+              </a>
+            )
+          })}
+          {user?.roles?.name === 'ADMIN' && (
+            <>
+              <p className="mt-4 truncate px-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                Administración
+              </p>
+              {adminItems.map((item) => {
+                const isActive = pathname.startsWith(item.href)
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
+                      isActive ? 'bg-white text-zinc-950' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
+                    <span>{item.label}</span>
+                  </a>
+                )
+              })}
+            </>
+          )}
+        </nav>
+
+        <div className="border-t border-zinc-700 pt-4">
+          <a
+            href="/dashboard/profile"
+            className={`flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-zinc-800 ${
+              pathname.startsWith('/dashboard/profile') ? 'bg-zinc-800' : ''
+            }`}
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold">
+              {user?.full_name?.charAt(0).toUpperCase() ?? '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white">{user?.full_name}</p>
+              <p className="truncate text-xs text-zinc-400">{user?.email}</p>
+              <p className="mt-1 truncate text-xs font-semibold text-emerald-400">
+                {user?.roles?.name ?? 'Sin rol'}
+              </p>
+            </div>
+          </a>
+          <button
+            onClick={handleLogout}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-2.5 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
+          >
+            <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-4 w-4 shrink-0" />
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Sidebar de escritorio (>=1024px): colapsado a iconos, se expande con hover */}
+      <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-hidden border-r border-zinc-200 bg-zinc-950 px-3 py-6 text-white transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
       <div className="mb-10 overflow-hidden whitespace-nowrap">
         <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           Inventario vial
@@ -160,5 +290,6 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   )
 }

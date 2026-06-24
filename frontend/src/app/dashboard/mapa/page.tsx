@@ -39,6 +39,7 @@ export default function MapaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<SignalStatus | ''>('')
   const [searchText, setSearchText] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('')
@@ -165,25 +166,34 @@ export default function MapaPage() {
       <Sidebar />
 
       {/* Content */}
-      <div className="flex flex-1 flex-col lg:pl-20">
-        <header className="border-b border-zinc-200 bg-white px-5 py-4 lg:px-8">
-          <div className="flex items-center justify-between">
+      <div className="flex flex-1 flex-col pt-14 lg:pl-20 lg:pt-0">
+        <header className="border-b border-zinc-200 bg-white px-4 py-4 sm:px-5 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-medium text-emerald-700">Mapa GIS</p>
               <h2 className="text-xl font-bold text-zinc-950">Señales en mapa</h2>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-zinc-500">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-xs text-zinc-500 sm:text-sm">
                 {loading ? 'Cargando…' : `${filteredSignals.length} señal${filteredSignals.length !== 1 ? 'es' : ''} visibles`}
               </span>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((v) => !v)}
+                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 lg:hidden"
+              >
+                {filtersOpen ? 'Ocultar filtros' : 'Filtros'}
+              </button>
               <NotificationBell />
             </div>
           </div>
         </header>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
           {/* Filters panel */}
-          <aside className="w-72 shrink-0 overflow-y-auto border-r border-zinc-200 bg-white p-4">
+          <aside
+            className={`${filtersOpen ? 'block' : 'hidden'} max-h-[55vh] w-full shrink-0 overflow-y-auto border-b border-zinc-200 bg-white p-4 lg:block lg:max-h-none lg:w-72 lg:border-b-0 lg:border-r`}
+          >
             {/* Search */}
             <div className="mb-4">
               <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
@@ -310,7 +320,7 @@ export default function MapaPage() {
           </aside>
 
           {/* Map */}
-          <div className="relative flex-1">
+          <div className="relative min-h-[400px] flex-1">
             {error && (
               <div className="absolute inset-x-0 top-4 z-10 mx-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow">
                 {error}

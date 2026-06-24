@@ -86,6 +86,10 @@ export default function SignalDetailPage() {
   const [toggling, setToggling] = useState(false)
 
   const handleToggleActive = async () => {
+    if (signal?.is_active && !window.confirm(`¿Desactivar la señal "${signal.signal_code}"? Dejará de aparecer en el mapa y en las vistas operativas.`)) {
+      return
+    }
+
     setToggling(true)
     try {
       const updated = await api.patch<SignalDetail>(`/api/signals/${id}/toggle-active`, {})
@@ -122,7 +126,7 @@ export default function SignalDetailPage() {
       title={signal.signal_code}
       subtitle="Señales"
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <a
             href="/dashboard/signals"
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
@@ -213,7 +217,7 @@ export default function SignalDetailPage() {
           ) : (
             <ul className="divide-y divide-zinc-100">
               {signal.inspections.map((insp) => (
-                <li key={insp.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                <li key={insp.id} className="flex flex-wrap items-start justify-between gap-2 px-5 py-3 text-sm">
                   <div>
                     <span className="font-medium text-zinc-800">{fmtDate(insp.inspection_date)}</span>
                     {insp.users?.full_name && (
@@ -240,7 +244,7 @@ export default function SignalDetailPage() {
           ) : (
             <ul className="divide-y divide-zinc-100">
               {signal.maintenances.map((m) => (
-                <li key={m.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                <li key={m.id} className="flex flex-wrap items-start justify-between gap-2 px-5 py-3 text-sm">
                   <div>
                     <span className="font-medium text-zinc-800">{fmtDate(m.maintenance_date)}</span>
                     {m.description && <p className="text-zinc-500">{m.description}</p>}

@@ -2,7 +2,10 @@
   "name": "sigsev-backend",
   "scripts": {
     "dev": "ts-node-dev src/server.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "start": "node dist/src/server.js",
+    "test": "jest"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
@@ -26,7 +29,10 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.15.21",
+    "@types/jest": "^29.5.14",
     "@types/pdfkit": "^0.13.4",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.3"

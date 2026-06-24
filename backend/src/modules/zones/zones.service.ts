@@ -106,3 +106,165 @@ export const deleteZone = async (id: string) => {
   }
   return { message: 'Zona eliminada' }
 }
+
+// --- Carga masiva (CSV/Excel) ---
+// Mismo patrón que signals.service.ts: encabezados en español sin tildes,
+// normalización de números/fechas de Excel, validación fila por fila,
+// inserción todo-o-nada.
+
+export interface BulkImportRowError {
+  row: number
+  message: string
+}
+
+export class BulkImportError extends Error {
+  errors: BulkImportRowError[]
+  constructor(errors: BulkImportRowError[]) {
+    super('Errores de validación en el archivo')
+    this.errors = errors
+  }
+}
+
+const DIACRITICS_REGEX = new RegExp('[̀-ͯ]', 'g')
+
+const normalizeHeader = (h: string) =>
+  h
+    .toString()
+    .replace(/^﻿/, '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(DIACRITICS_REGEX, '')
+    .replace(/\s+/g, '_')
+
+const HEADER_ALIASES: Record<string, string> = {
+  municipio: 'municipality',
+  municipality: 'municipality',
+  nombre: 'name',
+  name: 'name',
+  tipo: 'zone_type',
+  tipo_de_zona: 'zone_type',
+  zone_type: 'zone_type',
+  descripcion: 'description',
+  description: 'description',
+}
+
+const VALID_ZONE_TYPES = ['URBANA', 'RURAL']
+
+const rawToText = (val: unknown): string => {
+  if (val === undefined || val === null) return ''
+  if (typeof val === 'string') return val
+  return String(val)
+}
+
+const requiredTextField = (msg: string) =>
+  z.preprocess(rawToText, z.string().trim().min(1, msg))
+
+const optionalTextField = () =>
+  z.preprocess(rawToText, z.string().trim().optional().or(z.literal('')))
+
+const bulkZoneRowSchema = z.object({
+  municipality: requiredTextField('Municipio requerido'),
+  name: requiredTextField('Nombre requerido'),
+  zone_type: optionalTextField(),
+  description: optionalTextField(),
+})
+
+export const bulkImportZones = async (rawRows: Record<string, unknown>[]) => {
+  if (!rawRows || rawRows.length === 0) {
+    throw new Error('El archivo no tiene filas para importar')
+  }
+
+  const REQUIRED_FIELDS = ['municipality', 'name']
+  const rows = rawRows.map((raw) => {
+    const normalized: Record<string, unknown> = {}
+    for (const field of REQUIRED_FIELDS) normalized[field] = ''
+    for (const [key, value] of Object.entries(raw)) {
+      const normKey = normalizeHeader(key)
+      const field = HEADER_ALIASES[normKey] ?? normKey
+      normalized[field] = value
+    }
+    return normalized
+  })
+
+  const { data: municipalities } = await supabase.from('municipalities').select('id, name')
+  const municipalityMap = new Map<string, string>()
+  for (const m of municipalities ?? []) municipalityMap.set(m.name.trim().toLowerCase(), m.id)
+
+  const errors: BulkImportRowError[] = []
+  const toInsert: Record<string, unknown>[] = []
+  const seenKeys = new Set<string>()
+
+  rows.forEach((row, idx) => {
+    const rowNumber = idx + 2
+    const parsed = bulkZoneRowSchema.safeParse(row)
+
+    if (!parsed.success) {
+      const msg = parsed.error.issues.map((i) => i.message).join(', ')
+      errors.push({ row: rowNumber, message: msg })
+      return
+    }
+
+    const data = parsed.data
+
+    const municipalityId = municipalityMap.get(data.municipality.toLowerCase())
+    if (!municipalityId) {
+      errors.push({ row: rowNumber, message: `Municipio no encontrado: "${data.municipality}"` })
+      return
+    }
+
+    let zoneType = 'URBANA'
+    if (data.zone_type) {
+      const upper = data.zone_type.toUpperCase()
+      if (!VALID_ZONE_TYPES.includes(upper)) {
+        errors.push({ row: rowNumber, message: `Tipo inválido: "${data.zone_type}" (use URBANA o RURAL)` })
+        return
+      }
+      zoneType = upper
+    }
+
+    const dedupeKey = `${municipalityId}|${data.name.toLowerCase()}`
+    if (seenKeys.has(dedupeKey)) {
+      errors.push({ row: rowNumber, message: `Zona duplicada dentro del archivo: "${data.name}" en ese municipio` })
+      return
+    }
+    seenKeys.add(dedupeKey)
+
+    toInsert.push({
+      municipality_id: municipalityId,
+      name: data.name,
+      zone_type: zoneType,
+      description: data.description || null,
+    })
+  })
+
+  if (errors.length > 0) {
+    throw new BulkImportError(errors)
+  }
+
+  // Todo-o-nada: rechaza el archivo completo si alguna zona ya existe en ese municipio
+  for (const row of toInsert) {
+    const { data: existing } = await supabase
+      .from('zones')
+      .select('id')
+      .eq('municipality_id', row.municipality_id as string)
+      .ilike('name', row.name as string)
+      .maybeSingle()
+    if (existing) {
+      errors.push({ row: 0, message: `Ya existe una zona "${row.name}" en ese municipio` })
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new BulkImportError(errors)
+  }
+
+  const { data: inserted, error } = await supabase
+    .from('zones')
+    .insert(toInsert)
+    .select('id')
+
+  if (error) throw new Error(error.message)
+
+  return { inserted: inserted?.length ?? 0 }
+}

@@ -17,6 +17,7 @@ const ICONS: Record<string, string> = {
   'Mapa GIS': 'M9 4 3 6.5v14L9 18l6 2.5 6-2.5v-14L15 6.5 9 4Zm0 0v14m6-11.5v14',
   Señales: 'M12 2v6m0 0-7 12h14L12 8Zm-2.2 9h4.4',
   Zonas: 'M3 11l9-7 9 7M5 10v9h14v-9M9 19v-5h6v5',
+  'Mis asignaciones': 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
   Inspecciones: 'M9 11l2 2 4-4M5 5h14v15l-3-2-3 2-3-2-3 2V5Z',
   Mantenimientos: 'M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.83 2.83-2-2L14.7 6.3Z',
   Reportes: 'M7 3h7l3 3v15H7V3Zm7 0v3h3M9 13h6M9 17h6M9 9h2',
@@ -28,6 +29,7 @@ const navItems = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Mapa GIS', href: '/dashboard/mapa' },
   { label: 'Señales', href: '/dashboard/signals' },
+  { label: 'Mis asignaciones', href: '/dashboard/mis-asignaciones' },
   { label: 'Zonas', href: '/dashboard/zonas' },
   { label: 'Inspecciones', href: '/dashboard/inspections' },
   { label: 'Mantenimientos', href: '/dashboard/maintenances' },
@@ -53,11 +55,11 @@ export default function Sidebar() {
 
   // Módulos visibles en el sidebar según rol:
   // - CONSULTA: Dashboard, Mapa GIS
-  // - TECNICO: Dashboard, Mapa GIS, Señales
-  // - ADMIN / SUPERVISOR: todos (Dashboard, Mapa GIS, Señales, Inspecciones, Mantenimientos, Reportes)
+  // - TECNICO: Dashboard, Mapa GIS, Señales, Mis asignaciones
+  // - ADMIN / SUPERVISOR: todos (Dashboard, Mapa GIS, Señales, Zonas, Inspecciones, Mantenimientos, Reportes)
   const ALLOWED_HREFS_BY_ROLE: Record<string, string[]> = {
     CONSULTA: ['/dashboard', '/dashboard/mapa'],
-    TECNICO: ['/dashboard', '/dashboard/mapa', '/dashboard/signals'],
+    TECNICO: ['/dashboard', '/dashboard/mapa', '/dashboard/signals', '/dashboard/mis-asignaciones'],
   }
   const allowedHrefs = user?.roles?.name ? ALLOWED_HREFS_BY_ROLE[user.roles.name] : undefined
   const visibleNavItems = allowedHrefs

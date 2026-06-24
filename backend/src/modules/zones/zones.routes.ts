@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { verifyToken } from '../../middlewares/auth.middleware'
 import { requireRole } from '../../middlewares/requireRole.middleware'
-import { list, getOne, create, update, remove } from './zones.controller'
+import { list, getOne, create, update, remove, bulkImport, upload } from './zones.controller'
 
 const router = Router()
 
@@ -13,6 +13,7 @@ router.get('/:id', getOne)
 
 // Escritura: solo ADMIN y SUPERVISOR pueden gestionar el catálogo de zonas
 router.post('/', requireRole('ADMIN', 'SUPERVISOR'), create)
+router.post('/bulk-import', requireRole('ADMIN', 'SUPERVISOR'), upload.single('file'), bulkImport)
 router.put('/:id', requireRole('ADMIN', 'SUPERVISOR'), update)
 router.delete('/:id', requireRole('ADMIN', 'SUPERVISOR'), remove)
 

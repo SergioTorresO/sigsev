@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
 type ZoneType = 'URBANA' | 'RURAL'
@@ -34,6 +34,31 @@ const EMPTY_FORM: FormState = { department_id: '', municipality_id: '', name: ''
 
 const LIMIT = 20
 
+interface BulkImportRowError {
+  row: number
+  message: string
+}
+
+interface BulkImportResponse {
+  inserted?: number
+  message?: string
+  errors?: BulkImportRowError[]
+}
+
+const TEMPLATE_CSV = `municipio,nombre,tipo,descripcion
+Itagüí,Comuna 1,URBANA,
+`
+
+function downloadZonesTemplate() {
+  const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'plantilla_zonas.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function ZonasPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -63,6 +88,12 @@ export default function ZonasPage() {
   const [deleteTarget, setDeleteTarget] = useState<Zone | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const [showImport, setShowImport] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importErrors, setImportErrors] = useState<BulkImportRowError[]>([])
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -176,6 +207,44 @@ export default function ZonasPage() {
     }
   }
 
+  const closeImport = () => {
+    setShowImport(false)
+    setImportFile(null)
+    setImportErrors([])
+    setImportSuccess(null)
+  }
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!importFile) return
+
+    setImporting(true)
+    setImportErrors([])
+    setImportSuccess(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+      const res = await api.postForm<BulkImportResponse>('/api/zones/bulk-import', formData)
+      setImportSuccess(`Se importaron ${res.inserted ?? 0} zonas correctamente.`)
+      setImportFile(null)
+      fetchZones()
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const details = err.details as { errors?: BulkImportRowError[] }
+        if (details.errors && details.errors.length > 0) {
+          setImportErrors(details.errors)
+        } else {
+          setImportErrors([{ row: 0, message: err.message }])
+        }
+      } else if (err instanceof Error) {
+        setImportErrors([{ row: 0, message: err.message }])
+      }
+    } finally {
+      setImporting(false)
+    }
+  }
+
   if (!canManage) return null
 
   return (
@@ -200,12 +269,20 @@ export default function ZonasPage() {
             ))}
           </select>
         </div>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-        >
-          + Nueva zona
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+          >
+            Importar CSV/Excel
+          </button>
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            + Nueva zona
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -413,6 +490,81 @@ export default function ZonasPage() {
                 {deleting ? 'Eliminando…' : 'Eliminar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-zinc-950">Importar zonas</h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Sube un archivo CSV o Excel (.xlsx). Si alguna fila tiene un error, no se
+                  importa ninguna zona del archivo.
+                </p>
+              </div>
+              <button onClick={closeImport} className="text-zinc-400 hover:text-zinc-600">
+                ✕
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={downloadZonesTemplate}
+              className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+            >
+              Descargar plantilla de ejemplo (.csv)
+            </button>
+
+            {importSuccess && (
+              <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {importSuccess}
+              </div>
+            )}
+
+            {importErrors.length > 0 && (
+              <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <p className="mb-1 font-semibold">
+                  No se importó nada. Corrige estas filas e inténtalo de nuevo:
+                </p>
+                <ul className="list-inside list-disc space-y-1">
+                  {importErrors.map((e, i) => (
+                    <li key={i}>
+                      {e.row > 0 ? `Fila ${e.row}: ` : ''}
+                      {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                className="rounded-md border border-zinc-300 p-2 text-sm"
+              />
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeImport}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!importFile || importing}
+                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {importing ? 'Importando...' : 'Importar'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

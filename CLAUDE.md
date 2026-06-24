@@ -13,7 +13,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a s
 - **Validación**: Zod
 - **Gráficas**: Recharts (dashboard)
 - **Reportes**: exportación a Excel/PDF (`xlsx`, generación de PDF en backend)
-- **Carga masiva**: `multer` + `xlsx` (CSV/Excel) en `signals/bulk-import`
+- **Carga masiva**: `multer` + `xlsx` (CSV/Excel) en `signals/bulk-import` y `zones/bulk-import`
 
 ## Estructura de carpetas
 ```
@@ -31,7 +31,7 @@ sigsev-project/
 │   │   │   ├── signals/             # CRUD señales (soft delete is_active) + carga masiva CSV/Excel
 │   │   │   ├── inspections/         # CRUD inspecciones + actualiza status señal
 │   │   │   ├── maintenances/        # CRUD mantenimientos + completed_at + job de vencidos
-│   │   │   ├── zones/                # CRUD zonas/comunas/corregimientos por municipio (ADMIN/SUPERVISOR)
+│   │   │   ├── zones/                # CRUD zonas/comunas/corregimientos por municipio (ADMIN/SUPERVISOR) + carga masiva CSV/Excel
 │   │   │   ├── references/          # GET de catálogos: departamentos, municipios, zonas, categorías, tipos de señal
 │   │   │   ├── users/               # CRUD usuarios (solo ADMIN)
 │   │   │   ├── profile/             # cada usuario edita su propio nombre/teléfono/contraseña
@@ -54,9 +54,10 @@ sigsev-project/
     │   │   │   │   ├── page.tsx       # Lista (editar/desactivar/crear/carga masiva solo ADMIN/SUPERVISOR)
     │   │   │   │   ├── new/page.tsx   # Crear señal (redirige si no es ADMIN/SUPERVISOR)
     │   │   │   │   └── [id]/edit/page.tsx  # (redirige si no es ADMIN/SUPERVISOR)
-    │   │   │   ├── zonas/page.tsx          # CRUD de zonas (ADMIN/SUPERVISOR), selección en cascada Departamento→Municipio
+    │   │   │   ├── zonas/page.tsx          # CRUD de zonas (ADMIN/SUPERVISOR), selección en cascada Departamento→Municipio + carga masiva CSV/Excel
     │   │   │   ├── inspections/page.tsx    # Solo ADMIN/SUPERVISOR (redirige a /dashboard para TECNICO/CONSULTA); selector "Asignar a"
     │   │   │   ├── maintenances/page.tsx   # Solo ADMIN/SUPERVISOR (redirige a /dashboard para TECNICO/CONSULTA); selector "Asignar a"
+    │   │   │   ├── mis-asignaciones/page.tsx  # Solo TECNICO: inspecciones/mantenimientos asignados a él (solo lectura)
     │   │   │   ├── reportes/page.tsx       # Solo ADMIN/SUPERVISOR; exporta reportes a Excel/PDF
     │   │   │   ├── profile/page.tsx        # Cada usuario edita su propio nombre/teléfono/contraseña
     │   │   │   └── admin/
@@ -65,7 +66,7 @@ sigsev-project/
     │   │   ├── login/page.tsx
     │   │   └── layout.tsx             # Wraps con <Providers>
     │   ├── components/
-    │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales; ADMIN/SUPERVISOR: todo incl. Zonas); "Administración" (Usuarios, Auditoría) solo ADMIN
+    │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales+Mis asignaciones; ADMIN/SUPERVISOR: todo incl. Zonas); "Administración" (Usuarios, Auditoría) solo ADMIN
     │   │   ├── DashboardLayout.tsx    # Wrapper de header/main que renderiza <Sidebar />
     │   │   ├── MapView.tsx            # Componente Leaflet (no SSR)
     │   │   └── NotificationBell.tsx   # Campanita de notificaciones (mantenimientos vencidos, señales en mal estado)
@@ -113,6 +114,7 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 | GET | /api/zones | ✅ cualquier rol | Listar zonas (paginado, filtra por `municipality_id`, búsqueda por `search`) |
 | GET | /api/zones/:id | ✅ cualquier rol | Ver zona |
 | POST/PUT/DELETE | /api/zones(/:id) | ✅ ADMIN, SUPERVISOR | Crear / editar / eliminar zona (eliminar falla con mensaje claro si hay señales asociadas) |
+| POST | /api/zones/bulk-import | ✅ ADMIN, SUPERVISOR | Carga masiva de zonas desde CSV/Excel (.csv, .xlsx, .xls), mismo patrón todo-o-nada que señales |
 | GET | /api/ref/departments | ✅ cualquier rol | Departamentos de Colombia |
 | GET | /api/ref/municipalities | ✅ cualquier rol | Municipios (filtra por `department_id`) — catálogo completo, 1119 municipios |
 | GET | /api/ref/zones | ✅ cualquier rol | Zonas (filtra por `municipality_id`) — usado por los formularios de señales para poblar selects simples |
@@ -142,6 +144,8 @@ Hay **4 roles reales** en la base de datos (la opción "Por defecto" del formula
 | Crear/editar/desactivar señales (catálogo) | ✅ | ✅ | ❌ | ❌ |
 | Carga masiva de señales (CSV/Excel) | ✅ | ✅ | ❌ | ❌ |
 | Crear/editar/eliminar zonas | ✅ | ✅ | ❌ | ❌ |
+| Carga masiva de zonas (CSV/Excel) | ✅ | ✅ | ❌ | ❌ |
+| Ver "Mis asignaciones" (inspecciones/mantenimientos propios, solo lectura) | ❌ (no aplica) | ❌ (no aplica) | ✅ | ❌ |
 | Crear/editar inspecciones | ✅ | ✅ | ❌ | ❌ |
 | Crear/editar mantenimientos (y cambiar su estado) | ✅ | ✅ | ❌ | ❌ |
 | **Asignar** una inspección/mantenimiento a un técnico | ✅ | ✅ | ❌ | ❌ |
@@ -154,7 +158,7 @@ Hay **4 roles reales** en la base de datos (la opción "Por defecto" del formula
 Resumen por rol:
 - **ADMIN**: acceso total. Único rol que gestiona usuarios y ve el registro de auditoría.
 - **SUPERVISOR**: ve todos los módulos excepto Administración (Dashboard, Mapa GIS, Señales, Zonas, Inspecciones, Mantenimientos, Reportes). Gestiona el catálogo de señales y zonas, y puede **asignar** inspecciones/mantenimientos a técnicos vía `technician_id`/`assigned_to`. No tiene acceso a la página de Administración de usuarios (`/dashboard/admin/users`) ni a Auditoría (`/dashboard/admin/audit`), ni las ve en el sidebar — eso es exclusivo de ADMIN; el backend solo le deja consultar `/api/users` puntualmente para poblar el selector "Asignar a".
-- **TECNICO**: en el sidebar solo ve **Dashboard**, **Mapa GIS** y **Señales** (de solo lectura, sin crear/editar). No tiene acceso a Zonas, Inspecciones ni Mantenimientos — ni en el frontend (redirige a `/dashboard` si entra por URL directa) ni en el backend (`requireRole` no incluye TECNICO en esas rutas de escritura). Las inspecciones/mantenimientos que ADMIN/SUPERVISOR le asignen quedan registradas en la base de datos a su nombre, pero hoy no tiene una pantalla propia para verlas.
+- **TECNICO**: en el sidebar ve **Dashboard**, **Mapa GIS**, **Señales** (de solo lectura, sin crear/editar) y **Mis asignaciones** (`/dashboard/mis-asignaciones`): lista de solo lectura de las inspecciones y mantenimientos que ADMIN/SUPERVISOR le hayan asignado, consultando `GET /api/inspections?technician_id=<su id>` y `GET /api/maintenances?assigned_to=<su id>` (ambos endpoints ya estaban abiertos a cualquier rol autenticado, no fue necesario tocar el backend). No tiene acceso a Zonas ni a las páginas de gestión de Inspecciones/Mantenimientos — ni en el frontend (redirige a `/dashboard` si entra por URL directa) ni en el backend (`requireRole` no incluye TECNICO en esas rutas de escritura).
 - **CONSULTA**: en el sidebar solo ve **Dashboard** y **Mapa GIS** (los demás módulos —Señales, Zonas, Inspecciones, Mantenimientos, Reportes, Administración— están ocultos). Si intenta entrar por URL directa a esos módulos, el frontend lo redirige a `/dashboard`. Nota: las APIs de lectura de señales/inspecciones (`GET /api/signals`, `GET /api/inspections`) siguen abiertas a cualquier rol autenticado porque el propio Dashboard y el Mapa GIS las consumen para sus estadísticas y marcadores; lo que se restringe para CONSULTA es la navegación/página dedicada de esos módulos, no la lectura de datos que ya usa el Dashboard. Es además el rol por defecto al crear un usuario sin especificar rol.
 
 La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `backend/src/middlewares/requireRole.middleware.ts`); ese middleware también deja `req.user.roleName` cacheado para que los controladores de inspecciones/mantenimientos sepan si quien crea puede asignar a otro técnico. El frontend oculta/redirige según `user.roles.name` (de `AuthContext`) como UX, pero la autorización real siempre es la del backend.
@@ -181,9 +185,11 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 - [x] CRUD completo de señales (lista, crear, editar, desactivar) — restringido a ADMIN/SUPERVISOR
 - [x] Carga masiva de señales desde CSV/Excel (`signals/bulk-import`), validación fila por fila, todo-o-nada
 - [x] CRUD completo de zonas/comunas/corregimientos por municipio — restringido a ADMIN/SUPERVISOR
+- [x] Carga masiva de zonas desde CSV/Excel (`zones/bulk-import`), mismo patrón de validación todo-o-nada que señales
 - [x] Inspecciones (lista + crear inline, actualiza estado de señal) — solo ADMIN/SUPERVISOR (módulo oculto/bloqueado para TECNICO y CONSULTA)
 - [x] Mantenimientos (lista + crear inline, cambio de estado en tabla, job de vencidos) — solo ADMIN/SUPERVISOR (módulo oculto/bloqueado para TECNICO y CONSULTA)
 - [x] Asignación de inspecciones/mantenimientos a un técnico específico (ADMIN/SUPERVISOR)
+- [x] "Mis asignaciones" (`/dashboard/mis-asignaciones`): pantalla de solo lectura para TECNICO con sus inspecciones y mantenimientos asignados
 - [x] Notificaciones (campanita): mantenimientos vencidos y señales en mal estado, con disparo de email
 - [x] Reportes (`/dashboard/reportes`): exportación a Excel/PDF — solo ADMIN/SUPERVISOR
 - [x] Auditoría: log de cambios (quién editó qué, antes/después) sobre señales, zonas, inspecciones, mantenimientos y usuarios; lectura solo ADMIN en `/dashboard/admin/audit`
@@ -193,9 +199,7 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 - [x] Catálogo de 1119 municipios de Colombia (DANE) cargado en Supabase
 
 ## Próximos pasos sugeridos
-- [ ] **Pantalla propia para TECNICO**: vista de "mis inspecciones/mantenimientos asignados" (hoy quedan registrados a su nombre pero no tiene dónde verlos)
 - [ ] **Verificación de dominio personalizado** para el envío de correos de notificación en producción (Resend) — pendiente de retomar
-- [ ] **Carga masiva de zonas**: importar zonas desde CSV/Excel igual que señales, si llega a hacer falta para varios municipios a la vez
 
 ## Cómo correr el proyecto
 ```bash

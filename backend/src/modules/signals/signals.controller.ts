@@ -15,6 +15,7 @@ import {
   updateSignalSchema,
   signalFiltersSchema,
 } from './signals.service'
+import { logAudit } from '../../lib/audit'
 
 const ALLOWED_IMPORT_EXTENSIONS = ['.csv', '.xlsx', '.xls']
 const ALLOWED_IMPORT_MIME_TYPES = [
@@ -85,6 +86,7 @@ export const create = async (req: Request, res: Response) => {
   try {
     const data = createSignalSchema.parse(req.body)
     const signal = await createSignal(data, req.user!.userId)
+    void logAudit({ userId: req.user!.userId, action: 'CREATE', tableName: 'signals', recordId: signal.id, newData: signal })
     return res.status(201).json(signal)
   } catch (error) {
     return handleError(res, error)
@@ -94,7 +96,9 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const data = updateSignalSchema.parse(req.body)
+    const previous = await getSignalById(req.params.id as string).catch(() => null)
     const signal = await updateSignal(req.params.id as string, data)
+    void logAudit({ userId: req.user!.userId, action: 'UPDATE', tableName: 'signals', recordId: signal.id, oldData: previous, newData: signal })
     return res.json(signal)
   } catch (error) {
     if (error instanceof Error && error.message === 'Señal no encontrada') {
@@ -106,7 +110,9 @@ export const update = async (req: Request, res: Response) => {
 
 export const remove = async (req: Request, res: Response) => {
   try {
+    const previous = await getSignalById(req.params.id as string).catch(() => null)
     await deleteSignal(req.params.id as string)
+    void logAudit({ userId: req.user!.userId, action: 'DELETE', tableName: 'signals', recordId: req.params.id as string, oldData: previous, newData: { is_active: false } })
     return res.json({ message: 'Señal desactivada' })
   } catch (error) {
     if (error instanceof Error && error.message === 'Señal no encontrada') {
@@ -118,7 +124,9 @@ export const remove = async (req: Request, res: Response) => {
 
 export const toggleActive = async (req: Request, res: Response) => {
   try {
+    const previous = await getSignalById(req.params.id as string).catch(() => null)
     const signal = await toggleSignalActive(req.params.id as string)
+    void logAudit({ userId: req.user!.userId, action: 'TOGGLE_ACTIVE', tableName: 'signals', recordId: signal.id, oldData: previous, newData: signal })
     return res.json(signal)
   } catch (error) {
     if (error instanceof Error && error.message === 'Señal no encontrada') {
@@ -154,6 +162,12 @@ export const bulkImport = async (req: Request, res: Response) => {
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
 
     const result = await bulkImportSignals(rows, req.user!.userId)
+    void logAudit({
+      userId: req.user!.userId,
+      action: 'BULK_IMPORT',
+      tableName: 'signals',
+      newData: { insertedCount: result.inserted, fileName: req.file.originalname },
+    })
     return res.status(201).json(result)
   } catch (error) {
     if (error instanceof BulkImportError) {

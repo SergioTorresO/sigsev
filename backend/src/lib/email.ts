@@ -44,3 +44,33 @@ export const sendPasswordResetEmail = async (to: string, resetLink: string) => {
     throw new Error(`Error enviando correo: ${error.message}`)
   }
 }
+
+// Correo genérico para el módulo de notificaciones (señal en mal estado,
+// asignación de trabajo, mantenimiento vencido). Si no hay RESEND_API_KEY
+// configurada, simplemente no se envía (la notificación sigue funcionando
+// en la campanita de la app).
+export const sendNotificationEmail = async (to: string, title: string, message: string) => {
+  if (!resend) return
+
+  const { error } = await resend.emails.send({
+    from: fromAddress,
+    to,
+    subject: `${title} — SIGSEV`,
+    html: `
+      <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
+        <p style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#059669;margin-bottom:4px">
+          Inventario vial
+        </p>
+        <h1 style="font-size:18px;margin:0 0 16px">${title}</h1>
+        <p style="font-size:14px;color:#27272a">${message}</p>
+        <p style="margin-top:24px;font-size:12px;color:#71717a">
+          Revisa el módulo de notificaciones en SIGSEV para más detalles.
+        </p>
+      </div>
+    `,
+  })
+
+  if (error) {
+    throw new Error(`Error enviando correo de notificación: ${error.message}`)
+  }
+}

@@ -9,6 +9,8 @@ import {
   updateMaintenanceSchema,
   maintenanceFiltersSchema,
 } from './maintenances.service'
+import { createNotification } from '../notifications/notifications.service'
+import { logAudit } from '../../lib/audit'
 
 const handleError = (res: Response, error: unknown) => {
   if (error instanceof ZodError) {
@@ -53,6 +55,20 @@ export const create = async (req: Request, res: Response) => {
     const assignedTo = canAssign && data.assigned_to ? data.assigned_to : req.user!.userId
 
     const maintenance = await createMaintenance(data, assignedTo)
+
+    void logAudit({ userId: req.user!.userId, action: 'CREATE', tableName: 'maintenances', recordId: maintenance.id, newData: maintenance })
+
+    // Notifica al técnico solo si un ADMIN/SUPERVISOR le asignó el mantenimiento a otra persona
+    if (canAssign && assignedTo !== req.user!.userId) {
+      await createNotification({
+        type: 'ASSIGNMENT',
+        title: 'Nuevo mantenimiento asignado',
+        message: `Se te asignó un mantenimiento de la señal ${(maintenance as { signals?: { signal_code?: string } | null }).signals?.signal_code ?? ''}.`,
+        target_user_id: assignedTo,
+        maintenance_id: maintenance.id,
+      })
+    }
+
     return res.status(201).json(maintenance)
   } catch (error) {
     return handleError(res, error)
@@ -62,7 +78,9 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const data = updateMaintenanceSchema.parse(req.body)
+    const previous = await getMaintenanceById(req.params.id as string).catch(() => null)
     const maintenance = await updateMaintenance(req.params.id as string, data)
+    void logAudit({ userId: req.user!.userId, action: 'UPDATE', tableName: 'maintenances', recordId: maintenance.id, oldData: previous, newData: maintenance })
     return res.json(maintenance)
   } catch (error) {
     if (error instanceof Error && error.message === 'Mantenimiento no encontrado') {

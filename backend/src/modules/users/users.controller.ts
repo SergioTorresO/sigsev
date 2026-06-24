@@ -11,6 +11,7 @@ import {
   updateUserSchema,
   usersFiltersSchema,
 } from './users.service'
+import { logAudit } from '../../lib/audit'
 
 export const handleGetUsers = async (req: Request, res: Response) => {
   try {
@@ -36,6 +37,7 @@ export const handleCreateUser = async (req: Request, res: Response) => {
   try {
     const dto = createUserSchema.parse(req.body)
     const user = await createUser(dto)
+    void logAudit({ userId: req.user!.userId, action: 'CREATE', tableName: 'users', recordId: user.id, newData: user })
     res.status(201).json(user)
   } catch (err) {
     res.status(400).json({ message: err instanceof Error ? err.message : 'Error' })
@@ -45,7 +47,9 @@ export const handleCreateUser = async (req: Request, res: Response) => {
 export const handleUpdateUser = async (req: Request, res: Response) => {
   try {
     const dto = updateUserSchema.parse(req.body)
+    const previous = await getUserById(req.params.id as string).catch(() => null)
     const user = await updateUser(req.params.id as string, dto)
+    void logAudit({ userId: req.user!.userId, action: 'UPDATE', tableName: 'users', recordId: user.id, oldData: previous, newData: user })
     res.json(user)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'
@@ -55,7 +59,9 @@ export const handleUpdateUser = async (req: Request, res: Response) => {
 
 export const handleToggleActive = async (req: Request, res: Response) => {
   try {
+    const previous = await getUserById(req.params.id as string).catch(() => null)
     const user = await toggleUserActive(req.params.id as string)
+    void logAudit({ userId: req.user!.userId, action: 'TOGGLE_ACTIVE', tableName: 'users', recordId: user.id, oldData: previous, newData: user })
     res.json(user)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'
@@ -65,7 +71,9 @@ export const handleToggleActive = async (req: Request, res: Response) => {
 
 export const handleDeleteUser = async (req: Request, res: Response) => {
   try {
+    const previous = await getUserById(req.params.id as string).catch(() => null)
     const result = await deleteUser(req.params.id as string)
+    void logAudit({ userId: req.user!.userId, action: 'DELETE', tableName: 'users', recordId: req.params.id as string, oldData: previous })
     res.json(result)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'

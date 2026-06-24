@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react'
 import Sidebar from './Sidebar'
+import NotificationBell from './NotificationBell'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -30,7 +31,10 @@ export default function DashboardLayout({
               )}
               <h2 className="mt-1 text-2xl font-bold text-zinc-950">{title}</h2>
             </div>
-            {actions && <div className="flex gap-3">{actions}</div>}
+            <div className="flex items-center gap-3">
+              {actions}
+              <NotificationBell />
+            </div>
           </div>
         </header>
 

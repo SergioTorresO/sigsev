@@ -9,6 +9,8 @@ import {
   updateInspectionSchema,
   inspectionFiltersSchema,
 } from './inspections.service'
+import { createNotification } from '../notifications/notifications.service'
+import { logAudit } from '../../lib/audit'
 
 const handleError = (res: Response, error: unknown) => {
   if (error instanceof ZodError) {
@@ -53,6 +55,20 @@ export const create = async (req: Request, res: Response) => {
     const technicianId = canAssign && data.technician_id ? data.technician_id : req.user!.userId
 
     const inspection = await createInspection(data, technicianId)
+
+    void logAudit({ userId: req.user!.userId, action: 'CREATE', tableName: 'inspections', recordId: inspection.id, newData: inspection })
+
+    // Notifica al técnico solo si un ADMIN/SUPERVISOR le asignó la inspección a otra persona
+    if (canAssign && technicianId !== req.user!.userId) {
+      await createNotification({
+        type: 'ASSIGNMENT',
+        title: 'Nueva inspección asignada',
+        message: `Se te asignó una inspección de la señal ${(inspection as { signals?: { signal_code?: string } | null }).signals?.signal_code ?? ''}.`,
+        target_user_id: technicianId,
+        inspection_id: inspection.id,
+      })
+    }
+
     return res.status(201).json(inspection)
   } catch (error) {
     return handleError(res, error)
@@ -62,7 +78,9 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const data = updateInspectionSchema.parse(req.body)
+    const previous = await getInspectionById(req.params.id as string).catch(() => null)
     const inspection = await updateInspection(req.params.id as string, data)
+    void logAudit({ userId: req.user!.userId, action: 'UPDATE', tableName: 'inspections', recordId: inspection.id, oldData: previous, newData: inspection })
     return res.json(inspection)
   } catch (error) {
     if (error instanceof Error && error.message === 'Inspección no encontrada') {

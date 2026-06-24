@@ -12,6 +12,12 @@ import maintenanceRoutes from './modules/maintenances/maintenances.routes'
 import referencesRoutes from './modules/references/references.routes'
 import usersRoutes from './modules/users/users.routes'
 import profileRoutes from './modules/profile/profile.routes'
+import reportsRoutes from './modules/reports/reports.routes'
+import notificationsRoutes from './modules/notifications/notifications.routes'
+import dashboardRoutes from './modules/dashboard/dashboard.routes'
+import auditRoutes from './modules/audit/audit.routes'
+import zonesRoutes from './modules/zones/zones.routes'
+import { startOverdueMaintenanceJob } from './modules/maintenances/maintenances.service'
 
 const app = express()
 const isProduction = process.env.NODE_ENV === 'production'
@@ -67,6 +73,11 @@ app.use('/api/maintenances', maintenanceRoutes)
 app.use('/api/ref', referencesRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/profile', profileRoutes)
+app.use('/api/reports', reportsRoutes)
+app.use('/api/notifications', notificationsRoutes)
+app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/audit-logs', auditRoutes)
+app.use('/api/zones', zonesRoutes)
 
 app.get('/', (req, res) => {
   res.send('SIGSEV API RUNNING')
@@ -90,4 +101,8 @@ const PORT = Number(process.env.PORT) || 4000
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  // Revisión periódica de mantenimientos vencidos (notificaciones).
+  // No hay cron nativo en este setup; un intervalo en proceso es suficiente
+  // a esta escala (un solo servidor, sin múltiples instancias).
+  startOverdueMaintenanceJob()
 })

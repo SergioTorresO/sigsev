@@ -1,5 +1,6 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
+import { createNotification } from '../notifications/notifications.service'
 
 export const createMaintenanceSchema = z.object({
   signal_id: z.string().uuid('signal_id debe ser UUID'),
@@ -100,4 +101,53 @@ export const updateMaintenance = async (id: string, data: UpdateMaintenanceDTO) 
 
   if (error) throw new Error(error.message)
   return maintenance
+}
+
+// --- Notificación de mantenimientos vencidos ---
+//
+// No hay cron nativo en este Express plano, así que usamos un setInterval en
+// proceso. `overdue_notified` evita notificar el mismo mantenimiento vencido
+// más de una vez (si se reactiva — vuelve a PENDIENTE/EN_PROCESO con fecha
+// pasada — sí se vuelve a notificar, porque eso es una situación nueva).
+const OVERDUE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000 // cada 6 horas
+
+export const checkOverdueMaintenances = async () => {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const { data: overdue, error } = await supabase
+    .from('maintenances')
+    .select('id, description, maintenance_date, assigned_to, signals(signal_code)')
+    .in('status', ['PENDIENTE', 'EN_PROCESO'])
+    .lt('maintenance_date', today)
+    .eq('overdue_notified', false)
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('[maintenances] error revisando mantenimientos vencidos:', error.message)
+    return
+  }
+
+  for (const m of overdue ?? []) {
+    const signalCode = (m as { signals?: { signal_code?: string } | null }).signals?.signal_code ?? ''
+    try {
+      await createNotification({
+        type: 'MAINTENANCE_OVERDUE',
+        title: 'Mantenimiento vencido',
+        message: `El mantenimiento de la señal ${signalCode} programado para ${m.maintenance_date} sigue pendiente.`,
+        target_user_id: m.assigned_to as string | null,
+        maintenance_id: m.id as string,
+      })
+
+      await supabase.from('maintenances').update({ overdue_notified: true }).eq('id', m.id)
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[maintenances] error notificando mantenimiento ${m.id}:`, err instanceof Error ? err.message : err)
+    }
+  }
+}
+
+export const startOverdueMaintenanceJob = () => {
+  // Primera corrida poco después del arranque (da tiempo a que el server esté listo)
+  setTimeout(() => void checkOverdueMaintenances(), 30 * 1000)
+  setInterval(() => void checkOverdueMaintenances(), OVERDUE_CHECK_INTERVAL_MS)
 }

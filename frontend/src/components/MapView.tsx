@@ -21,8 +21,8 @@ export interface MapSignal {
   status: SignalStatus
   latitude: number
   longitude: number
-  municipalities: { name: string } | null
-  zones: { name: string; zone_type: string } | null
+  municipalities: { id: string; name: string } | null
+  zones: { id: string; name: string; zone_type: string } | null
   signal_categories: { name: string } | null
   signal_types: { name: string; code: string | null } | null
 }

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { api } from '@/lib/api'
 import type { MapSignal, SignalStatus } from '@/components/MapView'
 import Sidebar from '@/components/Sidebar'
+import NotificationBell from '@/components/NotificationBell'
 
 // Load Leaflet only on the client (it uses `window`)
 const MapView = dynamic(() => import('@/components/MapView'), {
@@ -20,6 +21,9 @@ interface SignalsResponse {
   data: MapSignal[]
   total: number
 }
+
+interface RefItem { id: string; name: string }
+interface MunicipalityRef extends RefItem { department_id: string }
 
 const STATUS_OPTIONS: { value: SignalStatus | ''; label: string; color: string }[] = [
   { value: '', label: 'Todos los estados', color: 'bg-zinc-200 text-zinc-700' },
@@ -37,6 +41,12 @@ export default function MapaPage() {
 
   const [statusFilter, setStatusFilter] = useState<SignalStatus | ''>('')
   const [searchText, setSearchText] = useState('')
+  const [departmentFilter, setDepartmentFilter] = useState('')
+  const [municipalityFilter, setMunicipalityFilter] = useState('')
+  const [zoneFilter, setZoneFilter] = useState('')
+
+  const [departments, setDepartments] = useState<RefItem[]>([])
+  const [municipalitiesRef, setMunicipalitiesRef] = useState<MunicipalityRef[]>([])
 
   useEffect(() => {
     const fetchSignals = async () => {
@@ -52,19 +62,96 @@ export default function MapaPage() {
       }
     }
     fetchSignals()
+
+    // Catálogo completo (no depende de las señales) solo para poder ubicar
+    // a qué departamento pertenece cada municipio que sí tiene señales.
+    Promise.all([
+      api.get<RefItem[]>('/api/ref/departments'),
+      api.get<MunicipalityRef[]>('/api/ref/municipalities'),
+    ]).then(([deps, munis]) => {
+      setDepartments(deps)
+      setMunicipalitiesRef(munis)
+    }).catch(() => {})
   }, [])
+
+  const departmentByMunicipalityId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const m of municipalitiesRef) map.set(m.id, m.department_id)
+    return map
+  }, [municipalitiesRef])
+
+  const departmentNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const d of departments) map.set(d.id, d.name)
+    return map
+  }, [departments])
+
+  // Listas de departamentos/municipios/zonas derivadas de las señales ya
+  // cargadas (no de la tabla completa de 1119 municipios de Colombia): solo
+  // interesa filtrar por lo que realmente tiene señales en el mapa.
+  const departmentOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of allSignals) {
+      const muniId = s.municipalities?.id
+      if (!muniId) continue
+      const depId = departmentByMunicipalityId.get(muniId)
+      if (!depId) continue
+      const depName = departmentNameById.get(depId)
+      if (depName) map.set(depId, depName)
+    }
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [allSignals, departmentByMunicipalityId, departmentNameById])
+
+  const municipalityOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of allSignals) {
+      if (!s.municipalities) continue
+      if (departmentFilter && departmentByMunicipalityId.get(s.municipalities.id) !== departmentFilter) continue
+      map.set(s.municipalities.id, s.municipalities.name)
+    }
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [allSignals, departmentFilter, departmentByMunicipalityId])
+
+  const zoneOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of allSignals) {
+      if (!s.zones) continue
+      if (municipalityFilter && s.municipalities?.id !== municipalityFilter) continue
+      map.set(s.zones.id, s.zones.name)
+    }
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [allSignals, municipalityFilter])
+
+  // Si cambia el departamento y el municipio elegido ya no aplica, se limpia.
+  useEffect(() => {
+    if (municipalityFilter && !municipalityOptions.some((m) => m.id === municipalityFilter)) {
+      setMunicipalityFilter('')
+    }
+  }, [municipalityOptions, municipalityFilter])
+
+  // Si cambia el municipio y la zona elegida ya no aplica, se limpia.
+  useEffect(() => {
+    if (zoneFilter && !zoneOptions.some((z) => z.id === zoneFilter)) {
+      setZoneFilter('')
+    }
+  }, [zoneOptions, zoneFilter])
 
   const filteredSignals = useMemo(() => {
     return allSignals.filter((s) => {
       const matchStatus = statusFilter === '' || s.status === statusFilter
+      const matchDepartment =
+        departmentFilter === '' ||
+        (s.municipalities ? departmentByMunicipalityId.get(s.municipalities.id) === departmentFilter : false)
+      const matchMunicipality = municipalityFilter === '' || s.municipalities?.id === municipalityFilter
+      const matchZone = zoneFilter === '' || s.zones?.id === zoneFilter
       const matchSearch =
         searchText === '' ||
         s.signal_code.toLowerCase().includes(searchText.toLowerCase()) ||
         (s.address ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
         (s.municipalities?.name ?? '').toLowerCase().includes(searchText.toLowerCase())
-      return matchStatus && matchSearch
+      return matchStatus && matchDepartment && matchMunicipality && matchZone && matchSearch
     })
-  }, [allSignals, statusFilter, searchText])
+  }, [allSignals, statusFilter, departmentFilter, municipalityFilter, zoneFilter, searchText, departmentByMunicipalityId])
 
   const countByStatus = useMemo(() => {
     return allSignals.reduce((acc, s) => {
@@ -85,9 +172,12 @@ export default function MapaPage() {
               <p className="text-sm font-medium text-emerald-700">Mapa GIS</p>
               <h2 className="text-xl font-bold text-zinc-950">Señales en mapa</h2>
             </div>
-            <span className="text-sm text-zinc-500">
-              {loading ? 'Cargando…' : `${filteredSignals.length} señal${filteredSignals.length !== 1 ? 'es' : ''} visibles`}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-zinc-500">
+                {loading ? 'Cargando…' : `${filteredSignals.length} señal${filteredSignals.length !== 1 ? 'es' : ''} visibles`}
+              </span>
+              <NotificationBell />
+            </div>
           </div>
         </header>
 
@@ -106,6 +196,58 @@ export default function MapaPage() {
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
+            </div>
+
+            {/* Department filter */}
+            <div className="mb-4">
+              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+                Departamento
+              </label>
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Todos los departamentos</option>
+                {departmentOptions.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Municipality filter */}
+            <div className="mb-4">
+              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+                Municipio
+              </label>
+              <select
+                value={municipalityFilter}
+                onChange={(e) => setMunicipalityFilter(e.target.value)}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              >
+                <option value="">Todos los municipios</option>
+                {municipalityOptions.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Zone filter */}
+            <div className="mb-4">
+              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+                Zona
+              </label>
+              <select
+                value={zoneFilter}
+                onChange={(e) => setZoneFilter(e.target.value)}
+                disabled={zoneOptions.length === 0}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-400"
+              >
+                <option value="">Todas las zonas</option>
+                {zoneOptions.map((z) => (
+                  <option key={z.id} value={z.id}>{z.name}</option>
+                ))}
+              </select>
             </div>
 
             {/* Status filter */}

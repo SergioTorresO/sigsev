@@ -16,16 +16,19 @@ const ICONS: Record<string, string> = {
   Dashboard: 'M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
   'Mapa GIS': 'M9 4 3 6.5v14L9 18l6 2.5 6-2.5v-14L15 6.5 9 4Zm0 0v14m6-11.5v14',
   Señales: 'M12 2v6m0 0-7 12h14L12 8Zm-2.2 9h4.4',
+  Zonas: 'M3 11l9-7 9 7M5 10v9h14v-9M9 19v-5h6v5',
   Inspecciones: 'M9 11l2 2 4-4M5 5h14v15l-3-2-3 2-3-2-3 2V5Z',
   Mantenimientos: 'M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.83 2.83-2-2L14.7 6.3Z',
   Reportes: 'M7 3h7l3 3v15H7V3Zm7 0v3h3M9 13h6M9 17h6M9 9h2',
   Usuarios: 'M16 14a4 4 0 1 0-8 0M3 21a7 7 0 0 1 18 0M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
+  Auditoría: 'M9 12h6m-6 4h6M5 4h14v16l-4-3-3 2-3-2-4 3V4Z',
 }
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Mapa GIS', href: '/dashboard/mapa' },
   { label: 'Señales', href: '/dashboard/signals' },
+  { label: 'Zonas', href: '/dashboard/zonas' },
   { label: 'Inspecciones', href: '/dashboard/inspections' },
   { label: 'Mantenimientos', href: '/dashboard/maintenances' },
   { label: 'Reportes', href: '/dashboard/reportes' },
@@ -33,6 +36,7 @@ const navItems = [
 
 const adminItems = [
   { label: 'Usuarios', href: '/dashboard/admin/users' },
+  { label: 'Auditoría', href: '/dashboard/admin/audit' },
 ]
 
 // Sidebar global: colapsado a iconos (w-20), se expande al pasar el cursor (hover:w-64).

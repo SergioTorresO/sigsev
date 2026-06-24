@@ -1,5 +1,9 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
+import { createNotification } from '../notifications/notifications.service'
+
+// Estados que se consideran "mal estado" para disparar una notificación a ADMIN/SUPERVISOR.
+const BAD_STATUSES = ['DETERIORADO', 'CAIDO', 'DESAPARECIDO']
 
 export const createInspectionSchema = z.object({
   signal_id: z.string().uuid('signal_id debe ser UUID'),
@@ -84,6 +88,18 @@ export const createInspection = async (data: CreateInspectionDTO, technicianId: 
     .from('signals')
     .update({ status: data.status, updated_at: new Date().toISOString() })
     .eq('id', data.signal_id)
+
+  if (BAD_STATUSES.includes(data.status)) {
+    const signalCode = (inspection as { signals?: { signal_code?: string } | null }).signals?.signal_code ?? data.signal_id
+    await createNotification({
+      type: 'SIGNAL_BAD_STATUS',
+      title: 'Señal en mal estado',
+      message: `La inspección reportó la señal ${signalCode} en estado ${data.status}.`,
+      target_user_id: null,
+      signal_id: data.signal_id,
+      inspection_id: inspection.id,
+    })
+  }
 
   return inspection
 }

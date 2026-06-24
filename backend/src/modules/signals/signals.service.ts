@@ -1,6 +1,9 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
 import * as XLSX from 'xlsx'
+import { createNotification } from '../notifications/notifications.service'
+
+const BAD_STATUSES = ['DETERIORADO', 'CAIDO', 'DESAPARECIDO']
 
 export const createSignalSchema = z.object({
   signal_code: z.string().trim().min(1, 'Código requerido'),
@@ -103,7 +106,7 @@ export const createSignal = async (data: CreateSignalDTO, installedBy: string) =
 }
 
 export const updateSignal = async (id: string, data: UpdateSignalDTO) => {
-  await getSignalById(id)
+  const previous = await getSignalById(id)
 
   const { data: signal, error } = await supabase
     .from('signals')
@@ -113,6 +116,19 @@ export const updateSignal = async (id: string, data: UpdateSignalDTO) => {
     .single()
 
   if (error) throw new Error(error.message)
+
+  // Solo notifica si el estado cambió a uno malo (editar otro campo, o
+  // mantenerse en el mismo estado malo, no debe disparar notificaciones repetidas).
+  if (data.status && data.status !== previous.status && BAD_STATUSES.includes(data.status)) {
+    await createNotification({
+      type: 'SIGNAL_BAD_STATUS',
+      title: 'Señal en mal estado',
+      message: `La señal ${signal.signal_code} fue actualizada al estado ${data.status}.`,
+      target_user_id: null,
+      signal_id: id,
+    })
+  }
+
   return signal
 }
 

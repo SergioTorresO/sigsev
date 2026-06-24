@@ -1,6 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import {
+  PieChart, Pie, Cell, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import DashboardLayout from '@/components/DashboardLayout'
@@ -37,6 +41,11 @@ interface InspectionsResponse {
   total: number
 }
 
+interface DashboardStats {
+  signalsByStatus: Record<string, number>
+  inspectionsByMonth: { month: string; count: number }[]
+}
+
 // --- Helpers ---
 const STATUS_COLORS: Record<string, string> = {
   BUENO: 'bg-emerald-100 text-emerald-700',
@@ -54,12 +63,22 @@ const STATUS_LABELS: Record<string, string> = {
   DESAPARECIDO: 'Desaparecido',
 }
 
+// Colores hex (recharts no soporta clases de Tailwind) alineados con STATUS_COLORS
+const STATUS_HEX: Record<string, string> = {
+  BUENO: '#10b981',
+  REGULAR: '#f59e0b',
+  DETERIORADO: '#f97316',
+  CAIDO: '#f43f5e',
+  DESAPARECIDO: '#a1a1aa',
+}
+
 // --- Component ---
 export default function DashboardPage() {
   const { user, isLoading } = useAuth()
 
   const [signals, setSignals] = useState<SignalsResponse | null>(null)
   const [inspections, setInspections] = useState<InspectionsResponse | null>(null)
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,13 +87,15 @@ export default function DashboardPage() {
       setLoadingData(true)
       setError(null)
 
-      const [signalsData, inspectionsData] = await Promise.all([
+      const [signalsData, inspectionsData, statsData] = await Promise.all([
         api.get<SignalsResponse>('/api/signals?limit=100'),
         api.get<InspectionsResponse>('/api/inspections?limit=5'),
+        api.get<DashboardStats>('/api/dashboard/stats'),
       ])
 
       setSignals(signalsData)
       setInspections(inspectionsData)
+      setDashboardStats(statsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar datos')
     } finally {
@@ -86,14 +107,9 @@ export default function DashboardPage() {
     if (!isLoading) fetchDashboardData()
   }, [isLoading, fetchDashboardData])
 
-  // Compute stats from real data
-  const statusCounts = signals?.data.reduce(
-    (acc, s) => {
-      acc[s.status] = (acc[s.status] ?? 0) + 1
-      return acc
-    },
-    {} as Record<string, number>
-  ) ?? {}
+  // Conteos por estado: usamos /api/dashboard/stats (cubre todo el inventario,
+  // no solo los primeros 100 registros que trae /api/signals para la tabla).
+  const statusCounts = dashboardStats?.signalsByStatus ?? {}
 
   const total = signals?.total ?? 0
   const bueno = statusCounts['BUENO'] ?? 0
@@ -131,6 +147,16 @@ export default function DashboardPage() {
     { label: 'Deteriorado', count: statusCounts['DETERIORADO'] ?? 0, color: 'bg-orange-500' },
     { label: 'Caído / Desaparecido', count: (statusCounts['CAIDO'] ?? 0) + (statusCounts['DESAPARECIDO'] ?? 0), color: 'bg-rose-500' },
   ]
+
+  const pieData = Object.entries(statusCounts)
+    .filter(([, count]) => count > 0)
+    .map(([status, count]) => ({
+      name: STATUS_LABELS[status] ?? status,
+      value: count,
+      color: STATUS_HEX[status] ?? '#a1a1aa',
+    }))
+
+  const inspectionsByMonth = dashboardStats?.inspectionsByMonth ?? []
 
   return (
     <DashboardLayout
@@ -258,6 +284,34 @@ export default function DashboardPage() {
             {/* Status summary */}
             <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
               <h3 className="text-base font-semibold">Estado del inventario</h3>
+
+              {loadingData ? (
+                <div className="mt-5 h-48 animate-pulse rounded bg-zinc-100" />
+              ) : pieData.length === 0 ? (
+                <p className="mt-5 text-sm text-zinc-400">Sin datos de señales.</p>
+              ) : (
+                <div className="mt-3 h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={45}
+                        outerRadius={70}
+                        paddingAngle={2}
+                      >
+                        {pieData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={24} wrapperStyle={{ fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
               <div className="mt-5 space-y-4">
                 {statusSummary.map((item) => {
                   const pct = total > 0 ? Math.round((item.count / total) * 100) : 0
@@ -292,6 +346,28 @@ export default function DashboardPage() {
               </div>
             </section>
           </div>
+
+          {/* Inspecciones por mes */}
+          <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+            <h3 className="text-base font-semibold">Inspecciones por mes</h3>
+            <p className="text-sm text-zinc-500">Últimos 6 meses</p>
+
+            {loadingData ? (
+              <div className="mt-4 h-64 animate-pulse rounded bg-zinc-100" />
+            ) : (
+              <div className="mt-4 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={inspectionsByMonth}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a1a1aa" />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#a1a1aa" />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Inspecciones" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
     </DashboardLayout>
   )
 }

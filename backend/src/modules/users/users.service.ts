@@ -50,7 +50,13 @@ export const getUsers = async (filters: UsersFilters) => {
 
   if (role_id) query = query.eq('role_id', role_id)
   if (is_active !== undefined) query = query.eq('is_active', is_active)
-  if (search) query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+  if (search) {
+    // Escapamos los caracteres con significado especial en el filtro
+    // PostgREST (`,`, `(`, `)`, `%`, `*`) para evitar que un valor de
+    // búsqueda manipule el filtro `or` e inyecte condiciones adicionales.
+    const safeSearch = search.replace(/[,()%*]/g, '\\$&')
+    query = query.or(`full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`)
+  }
 
   const { data, error, count } = await query
   if (error) throw new Error(error.message)

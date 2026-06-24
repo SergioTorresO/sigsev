@@ -33,14 +33,13 @@ export const register = async (
 
   try {
 
-    const { full_name, email, password, phone, role_id, municipality } = registerSchema.parse(req.body)
+    const { full_name, email, password, phone, municipality } = registerSchema.parse(req.body)
 
     const user = await registerUser({
       full_name,
       email,
       password,
       phone,
-      role_id,
       municipality,
     })
 

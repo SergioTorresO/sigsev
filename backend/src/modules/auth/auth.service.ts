@@ -10,7 +10,11 @@ export const registerSchema = z.object({
   email: z.string().trim().email('Correo electronico invalido').toLowerCase(),
   password: z.string().min(6, 'La contrasena debe tener al menos 6 caracteres'),
   phone: z.string().trim().regex(/^[0-9+\-()\s]{7,20}$/, 'Telefono invalido'),
-  role_id: z.string().uuid('role_id debe ser un UUID').optional(),
+  // NOTA DE SEGURIDAD: el registro público NUNCA acepta role_id del cliente.
+  // Todo usuario que se registra por su cuenta recibe el rol CONSULTA por
+  // defecto (ver registerUser). Asignar roles con más privilegios (ADMIN,
+  // SUPERVISOR, TECNICO) es exclusivo de un ADMIN autenticado a través de
+  // POST /api/users.
   municipality: z.string().trim().min(2, 'Municipio invalido'),
 })
 
@@ -34,7 +38,7 @@ type ForgotPasswordDTO = z.infer<typeof forgotPasswordSchema>
 type ResetPasswordDTO = z.infer<typeof resetPasswordSchema>
 
 export const registerUser = async ({
-  full_name, email, password, phone, role_id, municipality,
+  full_name, email, password, phone, municipality,
 }: RegisterDTO) => {
 
   // Check duplicate email
@@ -48,19 +52,12 @@ export const registerUser = async ({
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  // Resolve role
-  let finalRoleId: string | null = null
-  if (role_id) {
-    const { data: role } = await supabase
-      .from('roles').select('id').eq('id', role_id).maybeSingle()
-    if (!role) throw new Error('Rol no encontrado')
-    finalRoleId = role.id
-  } else {
-    const { data: defaultRole } = await supabase
-      .from('roles').select('id').eq('name', 'CONSULTA').maybeSingle()
-    if (!defaultRole) throw new Error('Rol CONSULTA no encontrado')
-    finalRoleId = defaultRole.id
-  }
+  // El registro público siempre asigna el rol CONSULTA. No se acepta
+  // role_id desde el cliente (ver nota de seguridad en registerSchema).
+  const { data: defaultRole } = await supabase
+    .from('roles').select('id').eq('name', 'CONSULTA').maybeSingle()
+  if (!defaultRole) throw new Error('Rol CONSULTA no encontrado')
+  const finalRoleId: string = defaultRole.id
 
   const { data: user, error } = await supabase
     .from('users')
@@ -131,11 +128,19 @@ export const requestPasswordReset = async ({ email }: ForgotPasswordDTO) => {
     return { message: 'Si el correo existe, se envió un enlace de recuperación' }
   }
 
-  // Sin RESEND_API_KEY configurada: modo desarrollo, devolvemos el enlace
-  // directamente en la respuesta para poder probar el flujo sin correo real.
+  // SEGURIDAD: sin RESEND_API_KEY configurada nunca devolvemos el token en
+  // la respuesta del API — eso permitiría a cualquiera tomar el control de
+  // cualquier cuenta (incluida un ADMIN) solo con su correo. En producción
+  // simplemente no hay flujo de recuperación funcional hasta configurar el
+  // email. En desarrollo local, el enlace se imprime en la consola del
+  // servidor para poder probar el flujo sin enviar un correo real.
+  if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.log(`[DEV] Enlace de recuperación de contraseña para ${email}: ${resetLink}`)
+  }
+
   return {
-    message: 'Si el correo existe, se generó un enlace de recuperación (modo desarrollo, sin email configurado)',
-    resetLink,
+    message: 'Si el correo existe, se generó un enlace de recuperación',
   }
 }
 

@@ -1,52 +1,41 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { api, ApiError } from '@/lib/api'
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [full_name, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
-  const [role_id, setRoleId] = useState('')
   const [municipality, setMunicipality] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
+  // Nota de seguridad: el registro público SIEMPRE crea el usuario con el
+  // rol CONSULTA (el backend ignora cualquier role_id que se intente enviar
+  // desde este formulario). Asignar roles con más privilegios es exclusivo
+  // de un ADMIN autenticado desde /dashboard/admin/users.
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    setLoading(true)
 
     try {
-      const response = await fetch(
-        'http://localhost:4000/api/auth/register',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            full_name,
-            email,
-            password,
-            phone,
-            role_id,
-            municipality
-          }),
-        }
+      const data = await api.post<{ message: string }>(
+        '/api/auth/register',
+        { full_name, email, password, phone, municipality },
+        false
       )
 
-      const data = await response.json()
-
       alert(data.message)
-
-      setFullName('')
-      setEmail('')
-      setPassword('')
-      setPhone('')
-      setMunicipality('')
-      setRoleId('')
-      
-      console.log(data)
-    } catch (error) {
-      console.error(error)
-      alert('Error al registrar usuario')
+      router.push('/login')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Error al registrar usuario')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -59,6 +48,12 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-bold">
           Registro SIGSEV
         </h1>
+
+        {error && (
+          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
 
         <input
           type="text"
@@ -111,39 +106,12 @@ export default function RegisterPage() {
           }
         />
 
-        <select
-          className="border p-3 rounded"
-          value={role_id}
-          onChange={(e) =>
-            setRoleId(e.target.value)
-          }
-        >
-          <option value="">
-            Seleccione un cargo
-          </option>
-
-          <option value="0206a6f2-b90f-4956-bff6-3886077979ae">
-            ADMIN
-          </option>
-
-          <option value="623cfb5b-6e4f-4d6d-a741-21ff56a2f4ab">
-            CONSULTA
-          </option>
-
-          <option value="6d1fd36a-fd77-4209-a5c2-24768ae56503">
-            SUPERVISOR
-          </option>
-
-          <option value="cc1134c7-681e-494d-a617-3d0dbf5dee96">
-            TECNICO
-          </option>
-        </select>
-
         <button
           type="submit"
-          className="bg-black text-white p-3 rounded"
+          disabled={loading}
+          className="bg-black text-white p-3 rounded disabled:opacity-60"
         >
-          Registrarse
+          {loading ? 'Registrando…' : 'Registrarse'}
         </button>
       </form>
     </div>

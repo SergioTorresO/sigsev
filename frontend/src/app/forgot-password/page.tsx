@@ -8,7 +8,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
-  const [devResetLink, setDevResetLink] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -16,13 +15,12 @@ export default function ForgotPasswordPage() {
     setLoading(true)
 
     try {
-      const data = await api.post<{ message: string; resetLink?: string }>(
+      await api.post<{ message: string }>(
         '/api/auth/forgot-password',
         { email },
         false
       )
       setSent(true)
-      setDevResetLink(data.resetLink ?? null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al solicitar el restablecimiento')
     } finally {
@@ -52,19 +50,6 @@ export default function ForgotPasswordPage() {
         {sent ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
             <p>Si el correo existe en el sistema, se generó un enlace de recuperación.</p>
-            {devResetLink && (
-              <div className="mt-3 border-t border-emerald-200 pt-3">
-                <p className="text-xs text-emerald-600">
-                  Modo desarrollo (todavía no hay servicio de correo configurado):
-                </p>
-                <a
-                  href={devResetLink}
-                  className="mt-1 block break-all text-xs font-medium text-emerald-700 underline"
-                >
-                  {devResetLink}
-                </a>
-              </div>
-            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

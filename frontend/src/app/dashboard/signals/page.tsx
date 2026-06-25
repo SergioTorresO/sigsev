@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface Signal {
   id: string
@@ -72,6 +73,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function SignalsPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const toast = useToast()
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
 
   useEffect(() => {
@@ -144,7 +146,7 @@ export default function SignalsPage() {
         prev.map((s) => (s.id === signal.id ? { ...s, is_active: !s.is_active } : s))
       )
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error')
+      toast.error(err instanceof Error ? err.message : 'Error')
     } finally {
       setTogglingId(null)
     }

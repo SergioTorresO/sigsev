@@ -1,21 +1,34 @@
 import supabase from '../../lib/supabase'
 
+const SIGNAL_STATUSES = ['BUENO', 'REGULAR', 'DETERIORADO', 'CAIDO', 'DESAPARECIDO'] as const
+
 // --- Señales por estado ---
 //
 // Solo señales activas (is_active = true): las desactivadas (soft delete) no
 // representan el inventario vigente y distorsionarían el gráfico.
+//
+// Antes esto traía TODAS las filas (columna status) a memoria solo para
+// contarlas en JS — con el inventario completo de un municipio eso es una
+// tabla entera por cada render del dashboard, y además PostgREST limita cada
+// respuesta a 1000 filas por defecto, así que pasado ese umbral el conteo
+// quedaría silenciosamente truncado. En su lugar se pide a Postgres un count
+// exacto por estado (`head: true` no descarga filas, solo el total).
 export const getSignalsByStatus = async () => {
-  const { data, error } = await supabase
-    .from('signals')
-    .select('status')
-    .eq('is_active', true)
-
-  if (error) throw new Error(error.message)
+  const results = await Promise.all(
+    SIGNAL_STATUSES.map((status) =>
+      supabase
+        .from('signals')
+        .select('id', { head: true, count: 'exact' })
+        .eq('is_active', true)
+        .eq('status', status)
+    )
+  )
 
   const counts: Record<string, number> = {}
-  for (const row of data ?? []) {
-    counts[row.status] = (counts[row.status] ?? 0) + 1
-  }
+  results.forEach((res, i) => {
+    if (res.error) throw new Error(res.error.message)
+    if (res.count) counts[SIGNAL_STATUSES[i]] = res.count
+  })
   return counts
 }
 

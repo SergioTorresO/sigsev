@@ -4,6 +4,9 @@ import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import multer from 'multer'
+import pinoHttp from 'pino-http'
+import { randomUUID } from 'crypto'
+import logger from './lib/logger'
 
 import authRoutes from './modules/auth/auth.routes'
 import signalRoutes from './modules/signals/signals.routes'
@@ -18,6 +21,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import auditRoutes from './modules/audit/audit.routes'
 import zonesRoutes from './modules/zones/zones.routes'
 import { startOverdueMaintenanceJob } from './modules/maintenances/maintenances.service'
+import supabase from './lib/supabase'
 
 const app = express()
 const isProduction = process.env.NODE_ENV === 'production'
@@ -28,6 +32,20 @@ app.set('trust proxy', 1) // Vercel/proxies en producción — necesario para qu
 // para servir HTML) y dejamos las cabeceras de seguridad que sí aplican a una
 // API JSON (noSniff, frameguard, hidePoweredBy, HSTS, etc).
 app.use(helmet({ contentSecurityPolicy: false }))
+
+// Logging estructurado por request: cada línea es JSON (nivel, método, ruta,
+// status, duración, reqId) en vez de console.log de texto libre. El reqId se
+// genera por request y se devuelve en el header `X-Request-Id`, así un error
+// reportado por el frontend se puede cruzar con la línea exacta del log.
+app.use(pinoHttp({
+  logger,
+  genReqId: (req, res) => {
+    const existing = req.headers['x-request-id']
+    const id = (typeof existing === 'string' && existing) || randomUUID()
+    res.setHeader('X-Request-Id', id)
+    return id
+  },
+}))
 
 // FRONTEND_URL admite una lista separada por comas para soportar varios
 // dominios de producción (p.ej. dominio propio + preview de Vercel).
@@ -83,6 +101,26 @@ app.get('/', (req, res) => {
   res.send('SIGSEV API RUNNING')
 })
 
+// Healthcheck real: además de confirmar que el proceso responde, hace una
+// consulta mínima a Supabase para detectar caídas/cortes de conectividad
+// (p.ej. red universitaria bloqueando el endpoint HTTPS, credencial rotada,
+// proyecto pausado). Usado por el orquestador de despliegue para saber si la
+// instancia está realmente lista para recibir tráfico, no solo "viva".
+app.get('/health', async (_req, res) => {
+  try {
+    const { error } = await supabase.from('roles').select('id', { head: true, count: 'exact' })
+    if (error) throw new Error(error.message)
+    res.status(200).json({ status: 'ok', supabase: 'up', timestamp: new Date().toISOString() })
+  } catch (err) {
+    res.status(503).json({
+      status: 'error',
+      supabase: 'down',
+      message: err instanceof Error ? err.message : 'Error desconocido',
+      timestamp: new Date().toISOString(),
+    })
+  }
+})
+
 // Manejador de errores global: evita que Express devuelva HTML con stack
 // traces (por defecto) y normaliza errores de Multer (archivo inválido,
 // demasiado grande) a respuestas JSON consistentes con el resto del API.
@@ -99,10 +137,31 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 const PORT = Number(process.env.PORT) || 4000
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+const server = app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`)
   // Revisión periódica de mantenimientos vencidos (notificaciones).
   // No hay cron nativo en este setup; un intervalo en proceso es suficiente
   // a esta escala (un solo servidor, sin múltiples instancias).
   startOverdueMaintenanceJob()
 })
+
+// Graceful shutdown: al desplegar (o al reiniciar el proceso), Vercel/el
+// orquestador envía SIGTERM antes de matar el proceso. Sin esto, Express
+// corta las conexiones en curso de inmediato; con server.close() se deja de
+// aceptar conexiones nuevas pero las requests ya en vuelo terminan antes de
+// salir del proceso. Un timeout de seguridad evita quedarse colgado si algo
+// no cierra (p.ej. el intervalo del job de mantenimientos vencidos).
+const shutdown = (signal: string) => {
+  logger.info(`${signal} recibido, cerrando servidor...`)
+  server.close(() => {
+    logger.info('Servidor cerrado, sin conexiones activas.')
+    process.exit(0)
+  })
+  setTimeout(() => {
+    logger.error('Cierre forzado: el servidor no cerró a tiempo.')
+    process.exit(1)
+  }, 10_000)
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))

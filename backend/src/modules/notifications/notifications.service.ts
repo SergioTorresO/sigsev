@@ -1,6 +1,7 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
 import { sendNotificationEmail, isEmailConfigured } from '../../lib/email'
+import logger from '../../lib/logger'
 
 const ADMIN_ROLES = ['ADMIN', 'SUPERVISOR']
 
@@ -137,8 +138,7 @@ export const createNotification = async (input: CreateNotificationInput) => {
   if (error) throw new Error(error.message)
 
   void notifyByEmail(input).catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error('[notifications] error enviando correo:', err instanceof Error ? err.message : err)
+    logger.error({ err, module: 'notifications' }, 'error enviando correo de notificación')
   })
 
   return data

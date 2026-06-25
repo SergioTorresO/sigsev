@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface Inspection {
   id: string
@@ -69,6 +70,7 @@ export default function SignalDetailPage() {
   const params = useParams()
   const id = params.id as string
   const { user } = useAuth()
+  const toast = useToast()
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
 
   const [signal, setSignal] = useState<SignalDetail | null>(null)
@@ -95,7 +97,7 @@ export default function SignalDetailPage() {
       const updated = await api.patch<SignalDetail>(`/api/signals/${id}/toggle-active`, {})
       setSignal(updated)
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error')
+      toast.error(err instanceof Error ? err.message : 'Error')
     } finally {
       setToggling(false)
     }

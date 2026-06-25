@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface Maintenance {
   id: string
@@ -37,6 +38,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function MaintenancesPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const toast = useToast()
   const canAssign = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
 
@@ -123,7 +125,7 @@ export default function MaintenancesPage() {
       await api.put(`/api/maintenances/${id}`, { status: newStatus })
       fetchMaintenances()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al actualizar estado')
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar estado')
     }
   }
 

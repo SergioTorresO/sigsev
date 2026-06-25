@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken'
 import * as crypto from 'crypto'
 import { z } from 'zod'
 import { isEmailConfigured, sendPasswordResetEmail } from '../../lib/email'
+import logger from '../../lib/logger'
 
 export const registerSchema = z.object({
   full_name: z.string().trim().min(3, 'El nombre es muy corto'),
@@ -135,8 +136,7 @@ export const requestPasswordReset = async ({ email }: ForgotPasswordDTO) => {
   // email. En desarrollo local, el enlace se imprime en la consola del
   // servidor para poder probar el flujo sin enviar un correo real.
   if (process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
-    console.log(`[DEV] Enlace de recuperación de contraseña para ${email}: ${resetLink}`)
+    logger.info({ module: 'auth', email, resetLink }, '[DEV] Enlace de recuperación de contraseña generado')
   }
 
   return {

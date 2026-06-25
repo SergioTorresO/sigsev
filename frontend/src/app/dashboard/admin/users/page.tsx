@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface Role { id: string; name: string; description: string | null }
 interface User {
@@ -31,6 +32,7 @@ const emptyForm = {
 export default function AdminUsersPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const toast = useToast()
 
   // Administración (gestión de usuarios) es exclusivo de ADMIN
   useEffect(() => {
@@ -152,7 +154,7 @@ export default function AdminUsersPage() {
       await api.patch(`/api/users/${id}/toggle-active`, {})
       fetchUsers()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error')
+      toast.error(err instanceof Error ? err.message : 'Error')
     }
   }
 
@@ -165,7 +167,7 @@ export default function AdminUsersPage() {
       setDeleteId(null)
       fetchUsers()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al eliminar usuario')
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar usuario')
     } finally {
       setDeleteLoading(false)
     }

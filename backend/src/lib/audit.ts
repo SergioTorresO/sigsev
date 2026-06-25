@@ -1,4 +1,5 @@
 import supabase from './supabase'
+import logger from './logger'
 
 // Acciones auditadas. La tabla audit_logs ya existía en el esquema de Supabase
 // (sin uso hasta ahora) — la reutilizamos en vez de crear una nueva.
@@ -28,7 +29,6 @@ export const logAudit = async ({ userId, action, tableName, recordId, oldData, n
     })
     if (error) throw new Error(error.message)
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[audit] error registrando log:', err instanceof Error ? err.message : err)
+    logger.error({ err, module: 'audit', tableName, action }, 'error registrando log de auditoría')
   }
 }

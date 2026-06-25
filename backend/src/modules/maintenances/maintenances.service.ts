@@ -1,6 +1,7 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
 import { createNotification } from '../notifications/notifications.service'
+import logger from '../../lib/logger'
 
 export const createMaintenanceSchema = z.object({
   signal_id: z.string().uuid('signal_id debe ser UUID'),
@@ -122,8 +123,7 @@ export const checkOverdueMaintenances = async () => {
     .eq('overdue_notified', false)
 
   if (error) {
-    // eslint-disable-next-line no-console
-    console.error('[maintenances] error revisando mantenimientos vencidos:', error.message)
+    logger.error({ err: error, module: 'maintenances' }, 'error revisando mantenimientos vencidos')
     return
   }
 
@@ -140,8 +140,7 @@ export const checkOverdueMaintenances = async () => {
 
       await supabase.from('maintenances').update({ overdue_notified: true }).eq('id', m.id)
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`[maintenances] error notificando mantenimiento ${m.id}:`, err instanceof Error ? err.message : err)
+      logger.error({ err, module: 'maintenances', maintenanceId: m.id }, 'error notificando mantenimiento vencido')
     }
   }
 }

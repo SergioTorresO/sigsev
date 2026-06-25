@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, ApiError } from '@/lib/api'
+import { useToast } from '@/context/ToastContext'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const toast = useToast()
   const [full_name, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +32,7 @@ export default function RegisterPage() {
         false
       )
 
-      alert(data.message)
+      toast.success(data.message)
       router.push('/login')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error al registrar usuario')

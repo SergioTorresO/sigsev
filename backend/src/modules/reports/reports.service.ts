@@ -1,6 +1,32 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
 
+// PostgREST limita cada respuesta a 1000 filas por defecto. Los reportes
+// necesitan exportar TODAS las filas que cumplan el filtro (no es una vista
+// paginada en pantalla, es un Excel/PDF completo), así que sin esto cualquier
+// reporte de más de 1000 señales/inspecciones/mantenimientos se truncaría en
+// silencio. Esta función pagina internamente con `.range()` en lotes de 1000
+// hasta agotar los resultados, y al final entrega el array completo.
+const PAGE_SIZE = 1000
+
+interface Rangeable<T> {
+  range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+}
+
+const fetchAllRows = async <T>(buildQuery: () => Rangeable<T>): Promise<T[]> => {
+  const rows: T[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message)
+    const page = data ?? []
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return rows
+}
+
 // Filtros comunes a los 4 reportes. Todos opcionales — sin filtros, se reporta todo.
 export const reportFiltersSchema = z.object({
   date_from: z.string().optional(), // aplica a inspection_date / maintenance_date según el reporte
@@ -14,23 +40,38 @@ export type ReportFilters = z.infer<typeof reportFiltersSchema>
 
 // --- Señales por estado ---
 
+type SignalReportRow = {
+  signal_code: string
+  address: string | null
+  status: string
+  installation_date: string | null
+  is_active: boolean
+  municipalities: { name: string } | null
+  zones: { name: string } | null
+  signal_categories: { name: string } | null
+  signal_types: { name: string } | null
+}
+
 export const getSignalsReportData = async (filters: ReportFilters) => {
-  let query = supabase
-    .from('signals')
-    .select(`
-      signal_code, address, status, installation_date, is_active,
-      municipalities(name), zones(name), signal_categories(name), signal_types(name)
-    `)
-    .order('signal_code', { ascending: true })
+  const buildQuery = () => {
+    let query = supabase
+      .from('signals')
+      .select(`
+        signal_code, address, status, installation_date, is_active,
+        municipalities(name), zones(name), signal_categories(name), signal_types(name)
+      `)
+      .order('signal_code', { ascending: true })
 
-  if (filters.municipality_id) query = query.eq('municipality_id', filters.municipality_id)
-  if (filters.zone_id) query = query.eq('zone_id', filters.zone_id)
-  if (filters.status) query = query.eq('status', filters.status)
+    if (filters.municipality_id) query = query.eq('municipality_id', filters.municipality_id)
+    if (filters.zone_id) query = query.eq('zone_id', filters.zone_id)
+    if (filters.status) query = query.eq('status', filters.status)
 
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
+    return query
+  }
 
-  return (data ?? []).map((s) => ({
+  const data = await fetchAllRows<unknown>(buildQuery as () => Rangeable<unknown>)
+
+  return (data as SignalReportRow[]).map((s) => ({
     'Código': s.signal_code,
     'Dirección': s.address ?? '',
     'Estado': s.status,
@@ -45,27 +86,38 @@ export const getSignalsReportData = async (filters: ReportFilters) => {
 
 // --- Inspecciones por período ---
 
+type InspectionReportRow = {
+  status: string
+  observations: string | null
+  inspection_date: string | null
+  signals: unknown
+  users: unknown
+}
+
 export const getInspectionsReportData = async (filters: ReportFilters) => {
   // signals!inner permite filtrar por columnas de la tabla relacionada (municipality_id/zone_id)
-  let query = supabase
-    .from('inspections')
-    .select(`
-      status, observations, inspection_date,
-      signals!inner(signal_code, address, municipality_id, zone_id, municipalities(name), zones(name)),
-      users(full_name)
-    `)
-    .order('inspection_date', { ascending: false })
+  const buildQuery = () => {
+    let query = supabase
+      .from('inspections')
+      .select(`
+        status, observations, inspection_date,
+        signals!inner(signal_code, address, municipality_id, zone_id, municipalities(name), zones(name)),
+        users(full_name)
+      `)
+      .order('inspection_date', { ascending: false })
 
-  if (filters.date_from) query = query.gte('inspection_date', filters.date_from)
-  if (filters.date_to) query = query.lte('inspection_date', filters.date_to)
-  if (filters.status) query = query.eq('status', filters.status)
-  if (filters.municipality_id) query = query.eq('signals.municipality_id', filters.municipality_id)
-  if (filters.zone_id) query = query.eq('signals.zone_id', filters.zone_id)
+    if (filters.date_from) query = query.gte('inspection_date', filters.date_from)
+    if (filters.date_to) query = query.lte('inspection_date', filters.date_to)
+    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.municipality_id) query = query.eq('signals.municipality_id', filters.municipality_id)
+    if (filters.zone_id) query = query.eq('signals.zone_id', filters.zone_id)
 
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
+    return query
+  }
 
-  return (data ?? []).map((r) => {
+  const data = await fetchAllRows<InspectionReportRow>(buildQuery as () => Rangeable<InspectionReportRow>)
+
+  return data.map((r) => {
     const signal = r.signals as unknown as {
       signal_code: string
       address: string | null
@@ -87,26 +139,39 @@ export const getInspectionsReportData = async (filters: ReportFilters) => {
 
 // --- Mantenimientos por período ---
 
+type MaintenanceReportRow = {
+  status: string
+  description: string | null
+  cost: number | null
+  maintenance_date: string | null
+  completed_at: string | null
+  signals: unknown
+  users: unknown
+}
+
 export const getMaintenancesReportData = async (filters: ReportFilters) => {
-  let query = supabase
-    .from('maintenances')
-    .select(`
-      status, description, cost, maintenance_date, completed_at,
-      signals!inner(signal_code, address, municipality_id, zone_id),
-      users(full_name)
-    `)
-    .order('maintenance_date', { ascending: false })
+  const buildQuery = () => {
+    let query = supabase
+      .from('maintenances')
+      .select(`
+        status, description, cost, maintenance_date, completed_at,
+        signals!inner(signal_code, address, municipality_id, zone_id),
+        users(full_name)
+      `)
+      .order('maintenance_date', { ascending: false })
 
-  if (filters.date_from) query = query.gte('maintenance_date', filters.date_from)
-  if (filters.date_to) query = query.lte('maintenance_date', filters.date_to)
-  if (filters.status) query = query.eq('status', filters.status)
-  if (filters.municipality_id) query = query.eq('signals.municipality_id', filters.municipality_id)
-  if (filters.zone_id) query = query.eq('signals.zone_id', filters.zone_id)
+    if (filters.date_from) query = query.gte('maintenance_date', filters.date_from)
+    if (filters.date_to) query = query.lte('maintenance_date', filters.date_to)
+    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.municipality_id) query = query.eq('signals.municipality_id', filters.municipality_id)
+    if (filters.zone_id) query = query.eq('signals.zone_id', filters.zone_id)
 
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
+    return query
+  }
 
-  return (data ?? []).map((m) => ({
+  const data = await fetchAllRows<MaintenanceReportRow>(buildQuery as () => Rangeable<MaintenanceReportRow>)
+
+  return data.map((m) => ({
     'Señal': (m.signals as unknown as { signal_code: string } | null)?.signal_code ?? '',
     'Dirección': (m.signals as unknown as { address: string | null } | null)?.address ?? '',
     'Descripción': m.description ?? '',
@@ -139,12 +204,20 @@ export const getSummaryReportData = async (filters: ReportFilters) => {
       : Promise.resolve({ data: null, error: null }),
   ])
 
-  const signalsQuery = (() => {
-    let q = supabase.from('signals').select('status', { count: 'exact', head: false })
+  // Antes esto traía TODAS las filas de señales/mantenimientos (con head:
+  // false) solo para contarlas por estado en JS — el mismo anti-patrón que
+  // en dashboard.service.ts, con el mismo riesgo de truncarse en silencio
+  // pasadas las 1000 filas que devuelve PostgREST por defecto. Se reemplaza
+  // por un count exacto (`head: true`) por cada estado posible, en paralelo.
+  const SIGNAL_STATUSES = ['BUENO', 'REGULAR', 'DETERIORADO', 'CAIDO', 'DESAPARECIDO'] as const
+  const MAINTENANCE_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'COMPLETADO'] as const
+
+  const signalCountQueries = SIGNAL_STATUSES.map((status) => {
+    let q = supabase.from('signals').select('id', { count: 'exact', head: true }).eq('status', status)
     if (filters.municipality_id) q = q.eq('municipality_id', filters.municipality_id)
     if (filters.zone_id) q = q.eq('zone_id', filters.zone_id)
     return q
-  })()
+  })
 
   const inspectionsQuery = (() => {
     let q = supabase.from('inspections').select('id', { count: 'exact', head: true })
@@ -154,33 +227,37 @@ export const getSummaryReportData = async (filters: ReportFilters) => {
   })()
 
   // signals!inner: maintenances no tiene municipality_id propio, se filtra a través de la señal asociada
-  const maintenancesQuery = (() => {
+  const maintenanceCountQueries = MAINTENANCE_STATUSES.map((status) => {
     let q = supabase
       .from('maintenances')
-      .select('status, signals!inner(municipality_id, zone_id)', { count: 'exact', head: false })
+      .select('id, signals!inner(municipality_id, zone_id)', { count: 'exact', head: true })
+      .eq('status', status)
     if (filters.municipality_id) q = q.eq('signals.municipality_id', filters.municipality_id)
     if (filters.zone_id) q = q.eq('signals.zone_id', filters.zone_id)
     return q
-  })()
+  })
 
-  const [signalsByStatus, inspectionsTotal, maintenancesByStatus] = await Promise.all([
-    signalsQuery,
+  const [signalResults, inspectionsTotal, maintenanceResults] = await Promise.all([
+    Promise.all(signalCountQueries),
     inspectionsQuery,
-    maintenancesQuery,
+    Promise.all(maintenanceCountQueries),
   ])
 
-  if (signalsByStatus.error) throw new Error(signalsByStatus.error.message)
   if (inspectionsTotal.error) throw new Error(inspectionsTotal.error.message)
-  if (maintenancesByStatus.error) throw new Error(maintenancesByStatus.error.message)
 
-  const countBy = (rows: { status: string }[] | null) => {
-    const counts: Record<string, number> = {}
-    for (const row of rows ?? []) counts[row.status] = (counts[row.status] ?? 0) + 1
-    return counts
-  }
+  const signalCounts: Record<string, number> = {}
+  signalResults.forEach((res, i) => {
+    if (res.error) throw new Error(res.error.message)
+    if (res.count) signalCounts[SIGNAL_STATUSES[i]] = res.count
+  })
 
-  const signalCounts = countBy(signalsByStatus.data)
-  const maintenanceCounts = countBy(maintenancesByStatus.data)
+  const maintenanceCounts: Record<string, number> = {}
+  maintenanceResults.forEach((res, i) => {
+    if (res.error) throw new Error(res.error.message)
+    if (res.count) maintenanceCounts[MAINTENANCE_STATUSES[i]] = res.count
+  })
+
+  const signalsTotal = Object.values(signalCounts).reduce((a, b) => a + b, 0)
 
   const locationLabel = [municipalityName.data?.name, zoneName.data?.name].filter(Boolean).join(' / ') || 'Todas'
   const periodLabel = filters.date_from || filters.date_to
@@ -190,7 +267,7 @@ export const getSummaryReportData = async (filters: ReportFilters) => {
   return [
     { 'Categoría': 'Filtros aplicados', 'Indicador': 'Ubicación (señales y mantenimientos)', 'Valor': locationLabel },
     { 'Categoría': 'Filtros aplicados', 'Indicador': 'Período (solo inspecciones)', 'Valor': periodLabel },
-    { 'Categoría': 'Señales', 'Indicador': 'Total', 'Valor': signalsByStatus.data?.length ?? 0 },
+    { 'Categoría': 'Señales', 'Indicador': 'Total', 'Valor': signalsTotal },
     ...Object.entries(signalCounts).map(([status, count]) => ({
       'Categoría': 'Señales', 'Indicador': `Estado: ${status}`, 'Valor': count,
     })),

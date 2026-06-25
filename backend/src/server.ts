@@ -39,7 +39,7 @@ app.use(helmet({ contentSecurityPolicy: false }))
 // reportado por el frontend se puede cruzar con la línea exacta del log.
 app.use(pinoHttp({
   logger,
-  genReqId: (req, res) => {
+  genReqId: (req: Request, res: Response) => {
     const existing = req.headers['x-request-id']
     const id = (typeof existing === 'string' && existing) || randomUUID()
     res.setHeader('X-Request-Id', id)

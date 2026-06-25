@@ -1,7 +1,12 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
-import * as XLSX from 'xlsx'
 import { createNotification } from '../notifications/notifications.service'
+import { BulkImportError, BulkImportRowError, normalizeHeader, rawToText } from '../../lib/bulkImport'
+
+// Re-exportado por compatibilidad: BulkImportError vivía antes en este archivo
+// (signals.service.bulkImport.test.ts y signals.controller.ts lo importaban de
+// aquí); ahora la fuente real es lib/bulkImport.ts, compartida con zones.
+export { BulkImportError }
 
 const BAD_STATUSES = ['DETERIORADO', 'CAIDO', 'DESAPARECIDO']
 
@@ -175,31 +180,8 @@ export const toggleSignalActive = async (id: string) => {
 }
 
 // --- Carga masiva (CSV/Excel) ---
-
-export interface BulkImportRowError {
-  row: number
-  message: string
-}
-
-export class BulkImportError extends Error {
-  errors: BulkImportRowError[]
-  constructor(errors: BulkImportRowError[]) {
-    super('Errores de validación en el archivo')
-    this.errors = errors
-  }
-}
-
-const DIACRITICS_REGEX = new RegExp('[̀-ͯ]', 'g')
-
-const normalizeHeader = (h: string) =>
-  h
-    .toString()
-    .replace(/^﻿/, '') // BOM que algunos editores/Excel agregan al primer encabezado
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(DIACRITICS_REGEX, '')
-    .replace(/\s+/g, '_')
+// normalizeHeader, BulkImportError y el middleware de multer/lectura de XLSX
+// viven en lib/bulkImport.ts (compartidos con zones.service.ts).
 
 // Encabezados aceptados (en español, sin tildes) -> campo interno
 const HEADER_ALIASES: Record<string, string> = {
@@ -243,24 +225,6 @@ const coordinateSchema = z.preprocess((val) => {
   }
   return NaN
 }, z.number({ message: 'Debe ser un número (use punto para decimales, ej. 6.1719)' }))
-
-// Excel/CSV a veces interpreta una celda con pinta de fecha ("2024-03-10")
-// y SheetJS la entrega como número de serie (p.ej. 45361) en vez de texto.
-// Lo normalizamos de vuelta a un string "YYYY-MM-DD".
-const rawToText = (val: unknown): string => {
-  if (val === undefined || val === null) return ''
-  if (typeof val === 'string') return val
-  if (typeof val === 'number') {
-    const parsed = XLSX.SSF.parse_date_code(val)
-    if (parsed && parsed.y) {
-      const mm = String(parsed.m).padStart(2, '0')
-      const dd = String(parsed.d).padStart(2, '0')
-      return `${parsed.y}-${mm}-${dd}`
-    }
-    return String(val)
-  }
-  return String(val)
-}
 
 const requiredTextField = (msg: string) =>
   z.preprocess(rawToText, z.string().trim().min(1, msg))

@@ -20,21 +20,21 @@ Basado en la auditoría completa del proyecto (backend, frontend, base de datos)
 
 ## Medio
 
-- [ ] Healthcheck endpoint (`/health`) que verifique conectividad real a Supabase.
-- [ ] Graceful shutdown (`SIGTERM`/`SIGINT`) para no cortar requests en curso al desplegar.
-- [ ] Logging estructurado (pino/winston) con request-id, en vez de `console.log`/`console.error`.
-- [ ] Paginar/limitar las queries de `dashboard.service.ts` y `reports.service.ts`, que hoy cargan tablas completas en memoria.
-- [ ] Agregar índices a las 11 foreign keys sin índice detectadas por Supabase (signals, inspections, maintenances, notifications, etc.) antes de que crezca el volumen de datos.
-- [ ] Unificar manejo de errores en frontend: hoy se mezcla `alert()` nativo con paneles inline; definir un solo patrón (idealmente toasts).
+- [x] Healthcheck endpoint (`/health`) que verifique conectividad real a Supabase — hace un `select` mínimo contra `roles` y responde 503 si Supabase no contesta.
+- [x] Graceful shutdown (`SIGTERM`/`SIGINT`) para no cortar requests en curso al desplegar — `server.close()` + timeout de seguridad de 10s en `server.ts`.
+- [x] Logging estructurado (pino/winston) con request-id, en vez de `console.log`/`console.error` — `pino-http` con `genReqId` y header `X-Request-Id` por respuesta.
+- [x] Paginar/limitar las queries de `dashboard.service.ts` y `reports.service.ts`, que hoy cargan tablas completas en memoria — dashboard usa `count: 'exact', head: true` (no descarga filas); reports pagina internamente con `.range()` en lotes de 1000.
+- [x] Agregar índices a las 11 foreign keys sin índice detectadas por Supabase (signals, inspections, maintenances, notifications, etc.) antes de que crezca el volumen de datos — confirmado vía advisor de performance de Supabase: ya no aparece ninguna alerta de FK sin índice, solo quedan índices "unused" de baja prioridad (ver sección Bajo).
+- [x] Unificar manejo de errores en frontend: hoy se mezcla `alert()` nativo con paneles inline; definir un solo patrón (idealmente toasts) — `ToastContext.tsx` + `providers.tsx`, adoptado en señales, mis-asignaciones, usuarios y registro.
 - [ ] Verificación de dominio personalizado para envío de correos en producción (Resend) — pendiente histórico ya documentado en CLAUDE.md.
 
 ## Bajo
 
-- [ ] Extraer a helpers compartidos la lógica de bulk-import duplicada entre `signals` y `zones` (`normalizeHeader`, `BulkImportError`, middleware de `multer`).
-- [ ] Componentizar los patrones repetidos de tabla/modal/paginación del frontend (hoy copiados casi textual en cada página) en `<Table>`/`<Modal>` reutilizables.
-- [ ] Accesibilidad básica: enlazar `<label htmlFor>` con sus inputs, agregar ARIA donde falte, focus trap + cierre con `Escape` en modales.
-- [ ] Eliminar los 3 índices nunca usados detectados por Supabase (`idx_signals_geom`, `idx_notifications_user_id`, `idx_notifications_is_read`) o confirmar que se usarán pronto.
-- [ ] Mover la extensión `postgis` fuera del esquema `public` (advisory de Supabase, bajo impacto real).
+- [x] Extraer a helpers compartidos la lógica de bulk-import duplicada entre `signals` y `zones` (`normalizeHeader`, `BulkImportError`, middleware de `multer`) — todo vive ahora en `backend/src/lib/bulkImport.ts` (ver CLAUDE.md, decisión 18); `signals.service.ts` re-exporta `BulkImportError` para no romper el test existente.
+- [x] Componentizar los patrones repetidos de modal/paginación del frontend (hoy copiados casi textual en cada página) en `<Modal>`/`<Pagination>` reutilizables — `frontend/src/components/Modal.tsx` (overlay + panel + ARIA, usa `useModalA11y` internamente) y `frontend/src/components/Pagination.tsx` ("Página X de Y" + Anterior/Siguiente), adoptados en las 7 páginas con modales/paginación: `signals`, `zonas`, `inspections`, `maintenances`, `mis-asignaciones`, `admin/users`, `admin/audit`. La componentización de `<Table>` se evaluó y se descartó deliberadamente: los esquemas de columnas difieren demasiado entre páginas para una abstracción que no termine siendo más compleja que el HTML que reemplaza.
+- [x] Accesibilidad básica: enlazar `<label htmlFor>` con sus inputs, agregar ARIA donde falte, focus trap + cierre con `Escape` en modales — `useModalA11y` (hook en `frontend/src/hooks/useModalA11y.ts`) centraliza foco inicial/restauración, focus trap con Tab y cierre con Escape; ahora vive encapsulado dentro de `<Modal>` en vez de llamarse por separado en cada página.
+- [x] Eliminar los índices nunca usados detectados por Supabase o confirmar que se usarán pronto — se confirma su uso futuro en vez de eliminarlos (ver CLAUDE.md, decisión 19): 11 son soporte de FK recién agregadas (esperan más volumen de datos/joins), `idx_notifications_is_read` soporta un filtro ya activo en el código, e `idx_signals_geom` soporta `signals.geom` (mantenida por trigger) preparada para una futura búsqueda espacial.
+- [x] Mover la extensión `postgis` fuera del esquema `public` (advisory de Supabase, bajo impacto real) — intentado y descartado: Postgres rechaza `ALTER EXTENSION postgis SET SCHEMA` (`0A000: extension "postgis" does not support SET SCHEMA`), y una migración real (drop/recrear) pondría en riesgo la columna `signals.geom` y su trigger sin beneficio funcional. Documentado como excepción aceptada (CLAUDE.md, decisión 20), igual que `spatial_ref_sys`.
 
 ---
 *Generado a partir de la auditoría de producción/UX del 2026-06-23. Ver CLAUDE.md para contexto de arquitectura.*

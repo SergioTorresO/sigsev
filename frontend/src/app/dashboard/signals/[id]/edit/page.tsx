@@ -14,7 +14,10 @@ export default function EditSignalPage() {
   const params = useParams()
   const id = params.id as string
   const { user } = useAuth()
-  const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+  const canWrite =
+    user?.roles?.name === 'ADMIN' ||
+    user?.roles?.name === 'SUPERVISOR' ||
+    user?.roles?.name === 'TECNICO'
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
@@ -150,13 +153,13 @@ export default function EditSignalPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Código *</label>
-              <input required value={form.signal_code} onChange={(e) => set('signal_code', e.target.value)}
+              <label htmlFor="signal-code" className="mb-1 block text-sm font-medium text-zinc-700">Código *</label>
+              <input id="signal-code" required value={form.signal_code} onChange={(e) => set('signal_code', e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Estado</label>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)}
+              <label htmlFor="signal-status" className="mb-1 block text-sm font-medium text-zinc-700">Estado</label>
+              <select id="signal-status" value={form.status} onChange={(e) => set('status', e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="BUENO">Bueno</option>
                 <option value="REGULAR">Regular</option>
@@ -166,16 +169,16 @@ export default function EditSignalPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Categoría</label>
-              <select value={form.category_id} onChange={(e) => { set('category_id', e.target.value); set('signal_type_id', '') }}
+              <label htmlFor="signal-category" className="mb-1 block text-sm font-medium text-zinc-700">Categoría</label>
+              <select id="signal-category" value={form.category_id} onChange={(e) => { set('category_id', e.target.value); set('signal_type_id', '') }}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="">Sin categoría</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Tipo de señal</label>
-              <select value={form.signal_type_id} onChange={(e) => set('signal_type_id', e.target.value)}
+              <label htmlFor="signal-type" className="mb-1 block text-sm font-medium text-zinc-700">Tipo de señal</label>
+              <select id="signal-type" value={form.signal_type_id} onChange={(e) => set('signal_type_id', e.target.value)}
                 disabled={!form.category_id}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50">
                 <option value="">Sin tipo</option>
@@ -183,16 +186,16 @@ export default function EditSignalPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Departamento</label>
-              <select value={form.department_id} onChange={(e) => { set('department_id', e.target.value); set('municipality_id', ''); set('zone_id', '') }}
+              <label htmlFor="signal-department" className="mb-1 block text-sm font-medium text-zinc-700">Departamento</label>
+              <select id="signal-department" value={form.department_id} onChange={(e) => { set('department_id', e.target.value); set('municipality_id', ''); set('zone_id', '') }}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="">Sin departamento</option>
                 {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
-              <select value={form.municipality_id} onChange={(e) => { set('municipality_id', e.target.value); set('zone_id', '') }}
+              <label htmlFor="signal-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
+              <select id="signal-municipality" value={form.municipality_id} onChange={(e) => { set('municipality_id', e.target.value); set('zone_id', '') }}
                 disabled={!form.department_id}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50">
                 <option value="">Sin municipio</option>
@@ -200,8 +203,8 @@ export default function EditSignalPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Zona</label>
-              <select value={form.zone_id} onChange={(e) => set('zone_id', e.target.value)}
+              <label htmlFor="signal-zone" className="mb-1 block text-sm font-medium text-zinc-700">Zona</label>
+              <select id="signal-zone" value={form.zone_id} onChange={(e) => set('zone_id', e.target.value)}
                 disabled={!form.municipality_id}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:opacity-50">
                 <option value="">Sin zona</option>
@@ -209,35 +212,35 @@ export default function EditSignalPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Latitud *</label>
-              <input required type="number" step="any" value={form.latitude} onChange={(e) => set('latitude', e.target.value)}
+              <label htmlFor="signal-latitude" className="mb-1 block text-sm font-medium text-zinc-700">Latitud *</label>
+              <input id="signal-latitude" required type="number" step="any" value={form.latitude} onChange={(e) => set('latitude', e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Longitud *</label>
-              <input required type="number" step="any" value={form.longitude} onChange={(e) => set('longitude', e.target.value)}
+              <label htmlFor="signal-longitude" className="mb-1 block text-sm font-medium text-zinc-700">Longitud *</label>
+              <input id="signal-longitude" required type="number" step="any" value={form.longitude} onChange={(e) => set('longitude', e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-700">Dirección</label>
-            <input value={form.address} onChange={(e) => set('address', e.target.value)}
+            <label htmlFor="signal-address" className="mb-1 block text-sm font-medium text-zinc-700">Dirección</label>
+            <input id="signal-address" value={form.address} onChange={(e) => set('address', e.target.value)}
               className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-700">Descripción</label>
-            <textarea rows={2} value={form.description} onChange={(e) => set('description', e.target.value)}
+            <label htmlFor="signal-description" className="mb-1 block text-sm font-medium text-zinc-700">Descripción</label>
+            <textarea id="signal-description" rows={2} value={form.description} onChange={(e) => set('description', e.target.value)}
               className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-700">Observaciones</label>
-            <textarea rows={2} value={form.observations} onChange={(e) => set('observations', e.target.value)}
+            <label htmlFor="signal-observations" className="mb-1 block text-sm font-medium text-zinc-700">Observaciones</label>
+            <textarea id="signal-observations" rows={2} value={form.observations} onChange={(e) => set('observations', e.target.value)}
               className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
           </div>
           <div className="max-w-xs">
-            <label className="mb-1 block text-sm font-medium text-zinc-700">Fecha de instalación</label>
-            <input type="date" value={form.installation_date} onChange={(e) => set('installation_date', e.target.value)}
+            <label htmlFor="signal-install-date" className="mb-1 block text-sm font-medium text-zinc-700">Fecha de instalación</label>
+            <input id="signal-install-date" type="date" value={form.installation_date} onChange={(e) => set('installation_date', e.target.value)}
               className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
           </div>
 

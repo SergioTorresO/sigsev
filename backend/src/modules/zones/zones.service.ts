@@ -1,5 +1,6 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
+import { BulkImportError, BulkImportRowError, normalizeHeader, rawToText } from '../../lib/bulkImport'
 
 export const createZoneSchema = z.object({
   municipality_id: z.string().uuid('Municipio inválido'),
@@ -108,34 +109,8 @@ export const deleteZone = async (id: string) => {
 }
 
 // --- Carga masiva (CSV/Excel) ---
-// Mismo patrón que signals.service.ts: encabezados en español sin tildes,
-// normalización de números/fechas de Excel, validación fila por fila,
-// inserción todo-o-nada.
-
-export interface BulkImportRowError {
-  row: number
-  message: string
-}
-
-export class BulkImportError extends Error {
-  errors: BulkImportRowError[]
-  constructor(errors: BulkImportRowError[]) {
-    super('Errores de validación en el archivo')
-    this.errors = errors
-  }
-}
-
-const DIACRITICS_REGEX = new RegExp('[̀-ͯ]', 'g')
-
-const normalizeHeader = (h: string) =>
-  h
-    .toString()
-    .replace(/^﻿/, '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(DIACRITICS_REGEX, '')
-    .replace(/\s+/g, '_')
+// normalizeHeader, BulkImportError y el middleware de multer/lectura de XLSX
+// viven en lib/bulkImport.ts (compartidos con signals.service.ts).
 
 const HEADER_ALIASES: Record<string, string> = {
   municipio: 'municipality',
@@ -150,12 +125,6 @@ const HEADER_ALIASES: Record<string, string> = {
 }
 
 const VALID_ZONE_TYPES = ['URBANA', 'RURAL']
-
-const rawToText = (val: unknown): string => {
-  if (val === undefined || val === null) return ''
-  if (typeof val === 'string') return val
-  return String(val)
-}
 
 const requiredTextField = (msg: string) =>
   z.preprocess(rawToText, z.string().trim().min(1, msg))

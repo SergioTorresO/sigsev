@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 
 interface Notification {
   id: string
-  type: 'SIGNAL_BAD_STATUS' | 'MAINTENANCE_OVERDUE' | 'ASSIGNMENT'
+  type: 'SIGNAL_BAD_STATUS' | 'MAINTENANCE_OVERDUE' | 'ASSIGNMENT' | 'MAINTENANCE_NEEDED'
   title: string
   message: string
   is_read: boolean
@@ -20,12 +20,14 @@ const TYPE_STYLES: Record<Notification['type'], string> = {
   SIGNAL_BAD_STATUS: 'bg-rose-100 text-rose-700',
   MAINTENANCE_OVERDUE: 'bg-amber-100 text-amber-700',
   ASSIGNMENT: 'bg-emerald-100 text-emerald-700',
+  MAINTENANCE_NEEDED: 'bg-sky-100 text-sky-700',
 }
 
 const TYPE_LABELS: Record<Notification['type'], string> = {
   SIGNAL_BAD_STATUS: 'Señal',
   MAINTENANCE_OVERDUE: 'Vencido',
   ASSIGNMENT: 'Asignación',
+  MAINTENANCE_NEEDED: 'Mantenimiento',
 }
 
 const formatRelativeTime = (iso: string) => {
@@ -44,6 +46,8 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
+  const [confirmingClear, setConfirmingClear] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const fetchUnreadCount = useCallback(() => {
@@ -68,6 +72,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (open) fetchNotifications()
+    else setConfirmingClear(false)
   }, [open, fetchNotifications])
 
   useEffect(() => {
@@ -100,6 +105,20 @@ export default function NotificationBell() {
     }
   }
 
+  const handleClearAll = async () => {
+    setClearing(true)
+    try {
+      await api.delete('/api/notifications/clear-all')
+      setNotifications([])
+      setUnreadCount(0)
+    } catch {
+      // silencioso
+    } finally {
+      setClearing(false)
+      setConfirmingClear(false)
+    }
+  }
+
   return (
     <div className="relative" ref={containerRef}>
       <button
@@ -119,14 +138,42 @@ export default function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-lg border border-zinc-200 bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+          <div className="flex items-center justify-between gap-2 border-b border-zinc-100 px-4 py-3">
             <p className="text-sm font-semibold text-zinc-900">Notificaciones</p>
-            {unreadCount > 0 && (
-              <button onClick={handleMarkAllRead} className="text-xs font-medium text-emerald-700 hover:underline">
-                Marcar todas como leídas
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button onClick={handleMarkAllRead} className="text-xs font-medium text-emerald-700 hover:underline">
+                  Marcar todas como leídas
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button onClick={() => setConfirmingClear(true)} className="text-xs font-medium text-rose-600 hover:underline">
+                  Vaciar bandeja
+                </button>
+              )}
+            </div>
           </div>
+
+          {confirmingClear && (
+            <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-4 py-2.5">
+              <p className="text-xs text-amber-800">¿Eliminar todas las notificaciones?</p>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => setConfirmingClear(false)}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleClearAll}
+                  disabled={clearing}
+                  className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+                >
+                  {clearing ? 'Vaciando…' : 'Sí, vaciar'}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="max-h-96 overflow-y-auto">
             {loading && (

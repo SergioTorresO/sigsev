@@ -55,6 +55,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <input
               type="email"
+              aria-label="Correo electrónico"
               placeholder="Correo electrónico"
               className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               value={email}

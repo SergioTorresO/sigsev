@@ -69,6 +69,7 @@ function LoginForm() {
 
         <input
           type="email"
+          aria-label="Correo electronico"
           placeholder="Correo electronico"
           className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           value={email}
@@ -78,6 +79,7 @@ function LoginForm() {
 
         <input
           type="password"
+          aria-label="Contrasena"
           placeholder="Contrasena"
           className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
           value={password}

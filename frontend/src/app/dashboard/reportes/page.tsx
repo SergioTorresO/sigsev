@@ -158,13 +158,13 @@ export default function ReportesPage() {
                     <p className="sm:col-span-2 -mb-1 text-xs text-zinc-400">{dateFilterHint}</p>
                   )}
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Desde</label>
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                    <label htmlFor="report-date-from" className="mb-1 block text-sm font-medium text-zinc-700">Desde</label>
+                    <input id="report-date-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
                       className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Hasta</label>
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                    <label htmlFor="report-date-to" className="mb-1 block text-sm font-medium text-zinc-700">Hasta</label>
+                    <input id="report-date-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
                       className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
                   </div>
                 </>
@@ -176,24 +176,24 @@ export default function ReportesPage() {
                     <p className="sm:col-span-2 -mb-1 text-xs text-zinc-400">{locationFilterHint}</p>
                   )}
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Departamento</label>
-                    <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}
+                    <label htmlFor="report-department" className="mb-1 block text-sm font-medium text-zinc-700">Departamento</label>
+                    <select id="report-department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}
                       className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                       <option value="">Todos</option>
                       {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
-                    <select value={municipalityId} onChange={(e) => setMunicipalityId(e.target.value)}
+                    <label htmlFor="report-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
+                    <select id="report-municipality" value={municipalityId} onChange={(e) => setMunicipalityId(e.target.value)}
                       className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                       <option value="">Todos</option>
                       {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Zona</label>
-                    <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} disabled={!municipalityId}
+                    <label htmlFor="report-zone" className="mb-1 block text-sm font-medium text-zinc-700">Zona</label>
+                    <select id="report-zone" value={zoneId} onChange={(e) => setZoneId(e.target.value)} disabled={!municipalityId}
                       className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:bg-zinc-50">
                       <option value="">Todas</option>
                       {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
@@ -204,8 +204,8 @@ export default function ReportesPage() {
 
               {showStatusFilter && (
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-700">Estado</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)}
+                  <label htmlFor="report-status" className="mb-1 block text-sm font-medium text-zinc-700">Estado</label>
+                  <select id="report-status" value={status} onChange={(e) => setStatus(e.target.value)}
                     className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                     <option value="">Todos</option>
                     {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}

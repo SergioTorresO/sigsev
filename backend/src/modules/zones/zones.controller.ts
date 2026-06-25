@@ -1,7 +1,5 @@
 import { Request, Response } from 'express'
 import { ZodError } from 'zod'
-import multer from 'multer'
-import * as XLSX from 'xlsx'
 import {
   getZones,
   getZoneById,
@@ -9,39 +7,16 @@ import {
   updateZone,
   deleteZone,
   bulkImportZones,
-  BulkImportError,
   createZoneSchema,
   updateZoneSchema,
   zoneFiltersSchema,
 } from './zones.service'
 import { logAudit } from '../../lib/audit'
+import { BulkImportError, createBulkImportUpload, parseSpreadsheetRows } from '../../lib/bulkImport'
 
-const ALLOWED_IMPORT_EXTENSIONS = ['.csv', '.xlsx', '.xls']
-const ALLOWED_IMPORT_MIME_TYPES = [
-  'text/csv',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/octet-stream',
-]
-
-export const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-    files: 1,
-  },
-  // Mismas restricciones que signals.controller.ts (ver comentario allí sobre
-  // vulnerabilidades conocidas de la librería xlsx/SheetJS).
-  fileFilter: (_req, file, cb) => {
-    const name = (file.originalname ?? '').toLowerCase()
-    const hasAllowedExtension = ALLOWED_IMPORT_EXTENSIONS.some((ext) => name.endsWith(ext))
-    const hasAllowedMimeType = ALLOWED_IMPORT_MIME_TYPES.includes(file.mimetype)
-    if (!hasAllowedExtension || !hasAllowedMimeType) {
-      return cb(new Error('Solo se permiten archivos .csv, .xlsx o .xls'))
-    }
-    cb(null, true)
-  },
-})
+// Middleware de multer compartido (ver lib/bulkImport.ts): mismas restricciones
+// que signals.controller.ts (memoria, máx. 5MB, solo .csv/.xlsx/.xls).
+export const upload = createBulkImportUpload()
 
 const handleError = (res: Response, error: unknown) => {
   if (error instanceof ZodError) {
@@ -122,17 +97,7 @@ export const bulkImport = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Debes adjuntar un archivo CSV o Excel (.xlsx)' })
     }
 
-    const isCsv = (req.file.originalname ?? '').toLowerCase().endsWith('.csv')
-    const readOptions = { bookVBA: false, bookFiles: false }
-    const workbook = isCsv
-      ? XLSX.read(req.file.buffer.toString('utf-8').replace(/^﻿/, ''), { type: 'string', ...readOptions })
-      : XLSX.read(req.file.buffer, { type: 'buffer', ...readOptions })
-    const sheetName = workbook.SheetNames[0]
-    if (!sheetName) {
-      return res.status(400).json({ message: 'El archivo no contiene hojas' })
-    }
-    const sheet = workbook.Sheets[sheetName]
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
+    const rows = parseSpreadsheetRows(req.file)
 
     const result = await bulkImportZones(rows)
     void logAudit({

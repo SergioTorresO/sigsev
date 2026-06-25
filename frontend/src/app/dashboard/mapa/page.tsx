@@ -196,10 +196,11 @@ export default function MapaPage() {
           >
             {/* Search */}
             <div className="mb-4">
-              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+              <label htmlFor="map-search" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
                 Buscar
               </label>
               <input
+                id="map-search"
                 type="text"
                 placeholder="Código, dirección, municipio…"
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -210,10 +211,11 @@ export default function MapaPage() {
 
             {/* Department filter */}
             <div className="mb-4">
-              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+              <label htmlFor="map-department" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
                 Departamento
               </label>
               <select
+                id="map-department"
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -227,10 +229,11 @@ export default function MapaPage() {
 
             {/* Municipality filter */}
             <div className="mb-4">
-              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+              <label htmlFor="map-municipality" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
                 Municipio
               </label>
               <select
+                id="map-municipality"
                 value={municipalityFilter}
                 onChange={(e) => setMunicipalityFilter(e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -244,10 +247,11 @@ export default function MapaPage() {
 
             {/* Zone filter */}
             <div className="mb-4">
-              <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
+              <label htmlFor="map-zone" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">
                 Zona
               </label>
               <select
+                id="map-zone"
                 value={zoneFilter}
                 onChange={(e) => setZoneFilter(e.target.value)}
                 disabled={zoneOptions.length === 0}
@@ -262,14 +266,15 @@ export default function MapaPage() {
 
             {/* Status filter */}
             <div className="mb-6">
-              <label className="mb-2 block text-xs font-semibold uppercase text-zinc-500">
+              <span id="map-status-label" className="mb-2 block text-xs font-semibold uppercase text-zinc-500">
                 Estado
-              </label>
-              <div className="space-y-1">
+              </span>
+              <div role="group" aria-labelledby="map-status-label" className="space-y-1">
                 {STATUS_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setStatusFilter(opt.value)}
+                    aria-pressed={statusFilter === opt.value}
                     className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                       statusFilter === opt.value
                         ? 'bg-zinc-950 text-white'

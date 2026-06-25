@@ -6,6 +6,8 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import Modal from '@/components/Modal'
+import Pagination from '@/components/Pagination'
 
 interface Role { id: string; name: string; description: string | null }
 interface User {
@@ -197,41 +199,41 @@ export default function AdminUsersPage() {
               <div className="sm:col-span-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{createError}</div>
             )}
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
-              <input required value={createForm.full_name} onChange={(e) => setCreateForm((f) => ({ ...f, full_name: e.target.value }))}
+              <label htmlFor="create-user-name" className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
+              <input id="create-user-name" required value={createForm.full_name} onChange={(e) => setCreateForm((f) => ({ ...f, full_name: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Correo *</label>
-              <input required type="email" value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+              <label htmlFor="create-user-email" className="mb-1 block text-sm font-medium text-zinc-700">Correo *</label>
+              <input id="create-user-email" required type="email" value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Contraseña *</label>
-              <input required type="password" value={createForm.password} onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+              <label htmlFor="create-user-password" className="mb-1 block text-sm font-medium text-zinc-700">Contraseña *</label>
+              <input id="create-user-password" required type="password" value={createForm.password} onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
-              <input value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+              <label htmlFor="create-user-phone" className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
+              <input id="create-user-phone" value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Rol</label>
-              <select value={createForm.role_id} onChange={(e) => setCreateForm((f) => ({ ...f, role_id: e.target.value }))}
+              <label htmlFor="create-user-role" className="mb-1 block text-sm font-medium text-zinc-700">Rol</label>
+              <select id="create-user-role" value={createForm.role_id} onChange={(e) => setCreateForm((f) => ({ ...f, role_id: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="">Por defecto (CONSULTA)</option>
                 {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
-              <input value={createForm.municipality} onChange={(e) => setCreateForm((f) => ({ ...f, municipality: e.target.value }))}
+              <label htmlFor="create-user-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
+              <input id="create-user-municipality" value={createForm.municipality} onChange={(e) => setCreateForm((f) => ({ ...f, municipality: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
-              <input value={createForm.position} onChange={(e) => setCreateForm((f) => ({ ...f, position: e.target.value }))}
+              <label htmlFor="create-user-position" className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
+              <input id="create-user-position" value={createForm.position} onChange={(e) => setCreateForm((f) => ({ ...f, position: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div className="sm:col-span-2">
@@ -247,16 +249,16 @@ export default function AdminUsersPage() {
       {/* Filters */}
       <div className="mb-4 flex flex-wrap gap-3">
         <input
-          type="text" placeholder="Buscar nombre o correo…" value={search}
+          type="text" aria-label="Buscar nombre o correo" placeholder="Buscar nombre o correo…" value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-56"
         />
-        <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
+        <select aria-label="Filtrar por rol" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos los roles</option>
           {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
-        <select value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value); setPage(1) }}
+        <select aria-label="Filtrar por estado" value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos</option>
           <option value="true">Activos</option>
@@ -339,101 +341,91 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-3">
-            <span className="text-xs text-zinc-500">Página {page} de {totalPages}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Anterior</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Siguiente</button>
-            </div>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
       {/* Edit modal */}
-      {editUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-lg border border-zinc-200 bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-base font-semibold text-zinc-950">Editar usuario</h3>
-            <form onSubmit={handleEdit} className="grid gap-4 sm:grid-cols-2">
-              {editError && (
-                <div className="sm:col-span-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{editError}</div>
-              )}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
-                <input required value={editForm.full_name} onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
-                <input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Rol</label>
-                <select value={editForm.role_id} onChange={(e) => setEditForm((f) => ({ ...f, role_id: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                  <option value="">Sin rol</option>
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
-                <input value={editForm.municipality} onChange={(e) => setEditForm((f) => ({ ...f, municipality: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
-                <input value={editForm.position} onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-zinc-700">Estado</label>
-                <button
-                  type="button"
-                  onClick={() => setEditForm((f) => ({ ...f, is_active: !f.is_active }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.is_active ? 'bg-emerald-600' : 'bg-zinc-300'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${editForm.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-                <span className="text-sm text-zinc-600">{editForm.is_active ? 'Activo' : 'Inactivo'}</span>
-              </div>
-              <div className="sm:col-span-2 flex gap-3 pt-2">
-                <button type="submit" disabled={editLoading}
-                  className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
-                  {editLoading ? 'Guardando…' : 'Guardar cambios'}
-                </button>
-                <button type="button" onClick={() => setEditUser(null)}
-                  className="rounded-md border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
-                  Cancelar
-                </button>
-              </div>
-            </form>
+      <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} titleId="edit-user-title" title="Editar usuario">
+        <form onSubmit={handleEdit} className="grid gap-4 sm:grid-cols-2">
+          {editError && (
+            <div className="sm:col-span-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{editError}</div>
+          )}
+          <div>
+            <label htmlFor="edit-user-name" className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
+            <input id="edit-user-name" required value={editForm.full_name} onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
           </div>
-        </div>
-      )}
+          <div>
+            <label htmlFor="edit-user-phone" className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
+            <input id="edit-user-phone" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label htmlFor="edit-user-role" className="mb-1 block text-sm font-medium text-zinc-700">Rol</label>
+            <select id="edit-user-role" value={editForm.role_id} onChange={(e) => setEditForm((f) => ({ ...f, role_id: e.target.value }))}
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+              <option value="">Sin rol</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="edit-user-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
+            <input id="edit-user-municipality" value={editForm.municipality} onChange={(e) => setEditForm((f) => ({ ...f, municipality: e.target.value }))}
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label htmlFor="edit-user-position" className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
+            <input id="edit-user-position" value={editForm.position} onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div className="flex items-center gap-3">
+            <span id="edit-user-status-label" className="text-sm font-medium text-zinc-700">Estado</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={editForm.is_active}
+              aria-labelledby="edit-user-status-label"
+              onClick={() => setEditForm((f) => ({ ...f, is_active: !f.is_active }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.is_active ? 'bg-emerald-600' : 'bg-zinc-300'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${editForm.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+            <span className="text-sm text-zinc-600">{editForm.is_active ? 'Activo' : 'Inactivo'}</span>
+          </div>
+          <div className="sm:col-span-2 flex gap-3 pt-2">
+            <button type="submit" disabled={editLoading}
+              className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+              {editLoading ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+            <button type="button" onClick={() => setEditUser(null)}
+              className="rounded-md border border-zinc-300 px-5 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete confirmation */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-base font-semibold text-zinc-950">Eliminar usuario</h3>
-            <p className="mb-5 text-sm text-zinc-600">Esta acción es permanente. ¿Deseas continuar?</p>
-            <div className="flex gap-3">
-              <button onClick={handleDelete} disabled={deleteLoading}
-                className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">
-                {deleteLoading ? 'Eliminando…' : 'Eliminar'}
-              </button>
-              <button onClick={() => setDeleteId(null)}
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
-                Cancelar
-              </button>
-            </div>
-          </div>
+      <Modal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        titleId="delete-user-title"
+        title="Eliminar usuario"
+        maxWidthClassName="max-w-sm"
+        showCloseButton={false}
+      >
+        <p className="mb-5 text-sm text-zinc-600">Esta acción es permanente. ¿Deseas continuar?</p>
+        <div className="flex gap-3">
+          <button onClick={handleDelete} disabled={deleteLoading}
+            className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">
+            {deleteLoading ? 'Eliminando…' : 'Eliminar'}
+          </button>
+          <button onClick={() => setDeleteId(null)}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+            Cancelar
+          </button>
         </div>
-      )}
+      </Modal>
     </DashboardLayout>
   )
 }

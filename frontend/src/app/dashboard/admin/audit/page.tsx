@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import Modal from '@/components/Modal'
+import Pagination from '@/components/Pagination'
 
 type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'TOGGLE_ACTIVE' | 'BULK_IMPORT'
 
@@ -88,6 +90,7 @@ export default function AdminAuditPage() {
     <DashboardLayout title="Auditoría" subtitle="Administración">
       <div className="mb-4 flex flex-wrap gap-3">
         <select
+          aria-label="Filtrar por tabla"
           value={tableFilter}
           onChange={(e) => { setTableFilter(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
@@ -100,6 +103,7 @@ export default function AdminAuditPage() {
           <option value="zones">Zonas</option>
         </select>
         <select
+          aria-label="Filtrar por acción"
           value={actionFilter}
           onChange={(e) => { setActionFilter(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
@@ -166,28 +170,18 @@ export default function AdminAuditPage() {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-3">
-            <span className="text-xs text-zinc-500">Página {page} de {totalPages}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Anterior</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Siguiente</button>
-            </div>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-lg border border-zinc-200 bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-zinc-950">
-                Detalle — {ACTION_LABELS[selected.action]} en {TABLE_LABELS[selected.table_name] ?? selected.table_name}
-              </h3>
-              <button onClick={() => setSelected(null)} className="text-zinc-400 hover:text-zinc-700">✕</button>
-            </div>
+      <Modal
+        isOpen={!!selected}
+        onClose={() => setSelected(null)}
+        titleId="audit-detail-title"
+        maxWidthClassName="max-w-2xl"
+        title={selected ? `Detalle — ${ACTION_LABELS[selected.action]} en ${TABLE_LABELS[selected.table_name] ?? selected.table_name}` : ''}
+      >
+        {selected && (
+          <>
             <p className="mb-4 text-sm text-zinc-500">
               {selected.users?.full_name ?? 'Sistema'} · {new Date(selected.created_at).toLocaleString('es-CO')}
             </p>
@@ -205,9 +199,9 @@ export default function AdminAuditPage() {
                 </pre>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </DashboardLayout>
   )
 }

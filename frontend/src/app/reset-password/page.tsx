@@ -67,6 +67,7 @@ function ResetPasswordForm() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <input
               type="password"
+              aria-label="Nueva contraseña"
               placeholder="Nueva contraseña"
               className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               value={password}
@@ -77,6 +78,7 @@ function ResetPasswordForm() {
 
             <input
               type="password"
+              aria-label="Confirmar contraseña"
               placeholder="Confirmar contraseña"
               className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
               value={confirmPassword}

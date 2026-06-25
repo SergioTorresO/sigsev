@@ -59,6 +59,7 @@ export default function RegisterPage() {
 
         <input
           type="text"
+          aria-label="Nombre completo"
           placeholder="Nombre completo"
           className="border p-3 rounded"
           value={full_name}
@@ -69,6 +70,7 @@ export default function RegisterPage() {
 
         <input
           type="email"
+          aria-label="Correo"
           placeholder="Correo"
           className="border p-3 rounded"
           value={email}
@@ -79,6 +81,7 @@ export default function RegisterPage() {
 
         <input
           type="password"
+          aria-label="Contraseña"
           placeholder="Contraseña"
           className="border p-3 rounded"
           value={password}
@@ -89,6 +92,7 @@ export default function RegisterPage() {
 
         <input
           type="text"
+          aria-label="Teléfono"
           placeholder="Teléfono"
           className="border p-3 rounded"
           value={phone}
@@ -97,9 +101,10 @@ export default function RegisterPage() {
 
           }
         />
-        
+
         <input
           type="text"
+          aria-label="Municipio"
           placeholder="Municipio"
           className="border p-3 rounded"
           value={municipality}

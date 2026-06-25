@@ -19,6 +19,19 @@ export const createInspectionSchema = z.object({
 
 export const updateInspectionSchema = createInspectionSchema.partial().omit({ signal_id: true })
 
+// Usado por el técnico (o ADMIN/SUPERVISOR) para marcar la inspección como
+// realizada: requiere estado, observaciones y foto (la foto se valida en el
+// controller vía multer, no aquí porque no es parte del body JSON).
+export const completeInspectionSchema = z.object({
+  status: z.enum(['BUENO', 'REGULAR', 'DETERIORADO', 'CAIDO', 'DESAPARECIDO']),
+  observations: z.string().trim().min(1, 'Las observaciones son obligatorias'),
+  // Viene como string 'true'/'false' porque el body es multipart/form-data.
+  needs_maintenance: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => v === 'true'),
+})
+
 export const inspectionFiltersSchema = z.object({
   signal_id: z.string().uuid().optional(),
   technician_id: z.string().uuid().optional(),
@@ -32,8 +45,8 @@ type UpdateInspectionDTO = z.infer<typeof updateInspectionSchema>
 type InspectionFilters = z.infer<typeof inspectionFiltersSchema>
 
 const INSPECTION_SELECT = `
-  id, status, observations, evidence_image, latitude, longitude,
-  inspection_date, created_at,
+  id, signal_id, technician_id, status, observations, evidence_image, latitude, longitude,
+  needs_maintenance, completed_at, inspection_date, created_at,
   signals(id, signal_code, address, latitude, longitude),
   users(id, full_name),
   evidences(id, image_url, description, created_at)
@@ -123,5 +136,75 @@ export const updateInspection = async (id: string, data: UpdateInspectionDTO) =>
     .single()
 
   if (error) throw new Error(error.message)
+  return inspection
+}
+
+type CompleteInspectionDTO = z.infer<typeof completeInspectionSchema>
+
+// Marca la inspección como realizada: actualiza su estado/observaciones,
+// propaga el mismo estado a la señal asociada (igual que al crear una
+// inspección) y registra la foto subida como evidencia.
+export const completeInspection = async (
+  id: string,
+  data: CompleteInspectionDTO,
+  evidenceImageUrl: string,
+  uploadedBy: string
+) => {
+  const existing = await getInspectionById(id)
+  const signalId = (existing as { signal_id?: string }).signal_id
+
+  const { data: inspection, error } = await supabase
+    .from('inspections')
+    .update({
+      status: data.status,
+      observations: data.observations,
+      evidence_image: evidenceImageUrl,
+      needs_maintenance: data.needs_maintenance ?? false,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select(INSPECTION_SELECT)
+    .single()
+
+  if (error) throw new Error(error.message)
+
+  if (signalId) {
+    const { error: signalError } = await supabase.from('signals').update({ status: data.status }).eq('id', signalId)
+    if (signalError) throw new Error(signalError.message)
+  }
+
+  const { error: evidenceError } = await supabase.from('evidences').insert({
+    inspection_id: id,
+    signal_id: signalId ?? null,
+    uploaded_by: uploadedBy,
+    image_url: evidenceImageUrl,
+    description: data.observations,
+  })
+  if (evidenceError) throw new Error(evidenceError.message)
+
+  const signalCode = (inspection as { signals?: { signal_code?: string } | null }).signals?.signal_code ?? signalId ?? ''
+
+  if (BAD_STATUSES.includes(data.status)) {
+    await createNotification({
+      type: 'SIGNAL_BAD_STATUS',
+      title: 'Señal en mal estado',
+      message: `La inspección reportó la señal ${signalCode} en estado ${data.status}.`,
+      target_user_id: null,
+      signal_id: signalId ?? undefined,
+      inspection_id: inspection.id,
+    })
+  }
+
+  if (data.needs_maintenance) {
+    await createNotification({
+      type: 'MAINTENANCE_NEEDED',
+      title: 'Mantenimiento requerido',
+      message: `El técnico reportó que la señal ${signalCode} necesita mantenimiento.`,
+      target_user_id: null,
+      signal_id: signalId ?? undefined,
+      inspection_id: inspection.id,
+    })
+  }
+
   return inspection
 }

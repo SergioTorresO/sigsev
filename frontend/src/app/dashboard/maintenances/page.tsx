@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-import { useToast } from '@/context/ToastContext'
+import Modal from '@/components/Modal'
+import Pagination from '@/components/Pagination'
 
 interface Maintenance {
   id: string
@@ -14,8 +15,10 @@ interface Maintenance {
   cost: number | null
   maintenance_date: string | null
   completed_at: string | null
+  observations?: string | null
   signals: { signal_code: string; address: string | null } | null
   users: { full_name: string } | null
+  evidences?: { id: string; image_url: string; description: string | null; created_at: string }[]
 }
 
 interface MaintenancesResponse {
@@ -36,9 +39,18 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export default function MaintenancesPage() {
+  return (
+    <Suspense fallback={null}>
+      <MaintenancesPageInner />
+    </Suspense>
+  )
+}
+
+function MaintenancesPageInner() {
   const { user } = useAuth()
   const router = useRouter()
-  const toast = useToast()
+  const searchParams = useSearchParams()
+  const prefillSignalId = searchParams.get('signal_id') ?? ''
   const canAssign = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
 
@@ -53,14 +65,15 @@ export default function MaintenancesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(!!prefillSignalId)
   const LIMIT = 15
 
   const [formLoading, setFormLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [signals, setSignals] = useState<{ id: string; signal_code: string }[]>([])
   const [technicians, setTechnicians] = useState<{ id: string; full_name: string }[]>([])
-  const [form, setForm] = useState({ signal_id: '', description: '', cost: '', maintenance_date: '', assigned_to: '' })
+  const [form, setForm] = useState({ signal_id: prefillSignalId, description: '', cost: '', maintenance_date: '', assigned_to: '' })
+  const [detailTarget, setDetailTarget] = useState<Maintenance | null>(null)
 
   const fetchMaintenances = useCallback(async () => {
     try {
@@ -87,9 +100,11 @@ export default function MaintenancesPage() {
   }, [showForm, signals.length])
 
   useEffect(() => {
+    // Un mantenimiento es trabajo de campo: solo se le puede asignar a un TECNICO
+    // (nunca a ADMIN/SUPERVISOR, que son quienes asignan).
     if (showForm && canAssign && technicians.length === 0) {
-      api.get<{ data: { id: string; full_name: string }[] }>('/api/users?limit=200&is_active=true')
-        .then((res) => setTechnicians(res.data))
+      api.get<{ data: { id: string; full_name: string; roles?: { name: string } | null }[] }>('/api/users?limit=200&is_active=true')
+        .then((res) => setTechnicians(res.data.filter((u) => u.roles?.name === 'TECNICO')))
     }
   }, [showForm, canAssign, technicians.length])
 
@@ -111,21 +126,6 @@ export default function MaintenancesPage() {
       setFormError(err instanceof Error ? err.message : 'Error al crear mantenimiento')
     } finally {
       setFormLoading(false)
-    }
-  }
-
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    // Marcar como completado es irreversible desde la UI (el select desaparece
-    // y ya no se puede volver a "Pendiente"/"En proceso"), así que se confirma antes.
-    if (newStatus === 'COMPLETADO' && !window.confirm('¿Marcar este mantenimiento como completado? No podrás cambiar su estado después.')) {
-      return
-    }
-
-    try {
-      await api.put(`/api/maintenances/${id}`, { status: newStatus })
-      fetchMaintenances()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al actualizar estado')
     }
   }
 
@@ -157,22 +157,22 @@ export default function MaintenancesPage() {
               </div>
             )}
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Señal *</label>
-              <select required value={form.signal_id} onChange={(e) => setForm((f) => ({ ...f, signal_id: e.target.value }))}
+              <label htmlFor="maintenance-signal" className="mb-1 block text-sm font-medium text-zinc-700">Señal *</label>
+              <select id="maintenance-signal" required value={form.signal_id} onChange={(e) => setForm((f) => ({ ...f, signal_id: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="">Seleccionar señal…</option>
                 {signals.map((s) => <option key={s.id} value={s.id}>{s.signal_code}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Fecha programada</label>
-              <input type="date" value={form.maintenance_date} onChange={(e) => setForm((f) => ({ ...f, maintenance_date: e.target.value }))}
+              <label htmlFor="maintenance-date" className="mb-1 block text-sm font-medium text-zinc-700">Fecha programada</label>
+              <input id="maintenance-date" type="date" value={form.maintenance_date} onChange={(e) => setForm((f) => ({ ...f, maintenance_date: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
             {canAssign && (
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
-                <select required value={form.assigned_to} onChange={(e) => setForm((f) => ({ ...f, assigned_to: e.target.value }))}
+                <label htmlFor="maintenance-assigned-to" className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
+                <select id="maintenance-assigned-to" required value={form.assigned_to} onChange={(e) => setForm((f) => ({ ...f, assigned_to: e.target.value }))}
                   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                   <option value="">Seleccionar técnico…</option>
                   {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
@@ -180,13 +180,13 @@ export default function MaintenancesPage() {
               </div>
             )}
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Costo estimado (COP)</label>
-              <input type="number" min="0" step="1000" value={form.cost} onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
+              <label htmlFor="maintenance-cost" className="mb-1 block text-sm font-medium text-zinc-700">Costo estimado (COP)</label>
+              <input id="maintenance-cost" type="number" min="0" step="1000" value={form.cost} onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Descripción *</label>
-              <textarea required rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              <label htmlFor="maintenance-description" className="mb-1 block text-sm font-medium text-zinc-700">Descripción *</label>
+              <textarea id="maintenance-description" required rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
             <div className="sm:col-span-2">
@@ -201,7 +201,7 @@ export default function MaintenancesPage() {
 
       {/* Filters */}
       <div className="mb-4 flex gap-3">
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+        <select aria-label="Filtrar por estado" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
@@ -230,7 +230,7 @@ export default function MaintenancesPage() {
                 <th className="px-5 py-3 font-semibold">Asignado a</th>
                 <th className="px-5 py-3 font-semibold">Fecha</th>
                 <th className="px-5 py-3 font-semibold">Costo</th>
-                <th className="px-5 py-3 font-semibold">Cambiar estado</th>
+                <th className="px-5 py-3 font-semibold">Detalle</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -262,26 +262,12 @@ export default function MaintenancesPage() {
                       {m.cost ? `$${Number(m.cost).toLocaleString('es-CO')}` : '—'}
                     </td>
                     <td className="px-5 py-4">
-                      {canWrite && m.status !== 'COMPLETADO' && (
-                        <select
-                          value={m.status}
-                          onChange={(e) => handleStatusChange(m.id, e.target.value)}
-                          className="rounded-md border border-zinc-300 px-2 py-1 text-xs focus:border-emerald-500 focus:outline-none"
-                        >
-                          <option value="PENDIENTE">Pendiente</option>
-                          <option value="EN_PROCESO">En proceso</option>
-                          <option value="COMPLETADO">Completado</option>
-                        </select>
-                      )}
-                      {(!canWrite || m.status === 'COMPLETADO') && (
-                        <span className="text-xs text-zinc-400">
-                          {m.status === 'COMPLETADO'
-                            ? (m.completed_at
-                                ? new Date(m.completed_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
-                                : 'Completado')
-                            : STATUS_LABELS[m.status]}
-                        </span>
-                      )}
+                      <button
+                        onClick={() => setDetailTarget(m)}
+                        className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+                      >
+                        Ver
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -289,18 +275,76 @@ export default function MaintenancesPage() {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-3">
-            <span className="text-xs text-zinc-500">Página {page} de {totalPages}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Anterior</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Siguiente</button>
-            </div>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
+
+      {detailTarget && (
+        <MaintenanceDetailModal maintenance={detailTarget} onClose={() => setDetailTarget(null)} />
+      )}
     </DashboardLayout>
+  )
+}
+
+function MaintenanceDetailModal({ maintenance, onClose }: { maintenance: Maintenance; onClose: () => void }) {
+  const photoUrl = maintenance.evidences?.[0]?.image_url ?? null
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      titleId="maintenance-detail-title"
+      title={
+        <>
+          Detalle del mantenimiento
+          <span className="ml-2 block text-sm font-normal text-zinc-500 sm:inline">
+            Señal {maintenance.signals?.signal_code ?? '—'} · {maintenance.users?.full_name ?? '—'}
+          </span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div>
+          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_COLORS[maintenance.status]}`}>
+            {STATUS_LABELS[maintenance.status]}
+          </span>
+          {maintenance.completed_at && (
+            <span className="ml-2 text-xs text-zinc-500">
+              Completado el {new Date(maintenance.completed_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-700">Descripción</p>
+          <p className="whitespace-pre-wrap rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            {maintenance.description || 'Sin descripción'}
+          </p>
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-700">Observaciones del técnico</p>
+          <p className="whitespace-pre-wrap rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            {maintenance.observations || 'Sin observaciones'}
+          </p>
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-700">Foto de evidencia</p>
+          {photoUrl ? (
+            <a href={photoUrl} target="_blank" rel="noopener noreferrer">
+              <img src={photoUrl} alt="Evidencia del mantenimiento" className="max-h-80 w-full rounded-md border border-zinc-200 object-contain" />
+            </a>
+          ) : (
+            <p className="text-sm text-zinc-400">No hay foto registrada</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <button onClick={onClose} className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
+          Cerrar
+        </button>
+      </div>
+    </Modal>
   )
 }

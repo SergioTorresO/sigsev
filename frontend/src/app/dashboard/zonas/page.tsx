@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import Modal from '@/components/Modal'
+import Pagination from '@/components/Pagination'
 
 type ZoneType = 'URBANA' | 'RURAL'
 
@@ -214,6 +216,7 @@ export default function ZonasPage() {
     setImportSuccess(null)
   }
 
+
   const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!importFile) return
@@ -253,12 +256,14 @@ export default function ZonasPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <input
             type="text"
+            aria-label="Buscar por nombre"
             placeholder="Buscar por nombre…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
           />
           <select
+            aria-label="Filtrar por municipio"
             value={municipalityFilter}
             onChange={(e) => { setMunicipalityFilter(e.target.value); setPage(1) }}
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
@@ -348,33 +353,20 @@ export default function ZonasPage() {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-3">
-            <span className="text-xs text-zinc-500">Página {page} de {totalPages}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Anterior</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Siguiente</button>
-            </div>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-zinc-950">
-                {editing ? 'Editar zona' : 'Nueva zona'}
-              </h3>
-              <button onClick={() => setShowForm(false)} className="text-zinc-400 hover:text-zinc-700">✕</button>
-            </div>
-
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        titleId="zone-form-title"
+        title={editing ? 'Editar zona' : 'Nueva zona'}
+      >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Departamento</label>
+                <label htmlFor="zone-department" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Departamento</label>
                 <select
+                  id="zone-department"
                   value={form.department_id}
                   onChange={(e) => setForm((f) => ({ ...f, department_id: e.target.value, municipality_id: '' }))}
                   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -387,8 +379,9 @@ export default function ZonasPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Municipio</label>
+                <label htmlFor="zone-municipality" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Municipio</label>
                 <select
+                  id="zone-municipality"
                   value={form.municipality_id}
                   onChange={(e) => setForm((f) => ({ ...f, municipality_id: e.target.value }))}
                   disabled={!form.department_id}
@@ -402,8 +395,9 @@ export default function ZonasPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Nombre</label>
+                <label htmlFor="zone-name" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Nombre</label>
                 <input
+                  id="zone-name"
                   type="text"
                   placeholder="Ej. Comuna 1, Vereda La Esperanza…"
                   value={form.name}
@@ -413,12 +407,13 @@ export default function ZonasPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Tipo</label>
-                <div className="flex gap-2">
+                <span id="zone-type-label" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Tipo</span>
+                <div role="group" aria-labelledby="zone-type-label" className="flex gap-2">
                   {(['URBANA', 'RURAL'] as ZoneType[]).map((t) => (
                     <button
                       key={t}
                       type="button"
+                      aria-pressed={form.zone_type === t}
                       onClick={() => setForm((f) => ({ ...f, zone_type: t }))}
                       className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
                         form.zone_type === t ? 'bg-zinc-950 text-white' : 'border border-zinc-300 text-zinc-700 hover:bg-zinc-50'
@@ -431,8 +426,9 @@ export default function ZonasPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Descripción (opcional)</label>
+                <label htmlFor="zone-description" className="mb-1 block text-xs font-semibold uppercase text-zinc-500">Descripción (opcional)</label>
                 <textarea
+                  id="zone-description"
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   rows={2}
@@ -461,113 +457,102 @@ export default function ZonasPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-xl">
-            <h3 className="mb-2 text-base font-semibold text-zinc-950">Eliminar zona</h3>
-            <p className="mb-4 text-sm text-zinc-600">
-              ¿Seguro que quieres eliminar la zona <strong>{deleteTarget.name}</strong>? Esta acción no se puede deshacer.
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        titleId="zone-delete-title"
+        title="Eliminar zona"
+        maxWidthClassName="max-w-sm"
+        showCloseButton={false}
+      >
+        <p className="mb-4 text-sm text-zinc-600">
+          ¿Seguro que quieres eliminar la zona <strong>{deleteTarget?.name}</strong>? Esta acción no se puede deshacer.
+        </p>
+        {deleteError && (
+          <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{deleteError}</div>
+        )}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setDeleteTarget(null)}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+          >
+            {deleting ? 'Eliminando…' : 'Eliminar'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showImport} onClose={closeImport} titleId="import-zones-title" title="Importar zonas">
+        <p className="mb-4 text-sm text-zinc-500">
+          Sube un archivo CSV o Excel (.xlsx). Si alguna fila tiene un error, no se
+          importa ninguna zona del archivo.
+        </p>
+
+        <button
+          type="button"
+          onClick={downloadZonesTemplate}
+          className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+        >
+          Descargar plantilla de ejemplo (.csv)
+        </button>
+
+        {importSuccess && (
+          <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {importSuccess}
+          </div>
+        )}
+
+        {importErrors.length > 0 && (
+          <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="mb-1 font-semibold">
+              No se importó nada. Corrige estas filas e inténtalo de nuevo:
             </p>
-            {deleteError && (
-              <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{deleteError}</div>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
-              >
-                {deleting ? 'Eliminando…' : 'Eliminar'}
-              </button>
-            </div>
+            <ul className="list-inside list-disc space-y-1">
+              {importErrors.map((e, i) => (
+                <li key={i}>
+                  {e.row > 0 ? `Fila ${e.row}: ` : ''}
+                  {e.message}
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      )}
+        )}
 
-      {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-zinc-950">Importar zonas</h2>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Sube un archivo CSV o Excel (.xlsx). Si alguna fila tiene un error, no se
-                  importa ninguna zona del archivo.
-                </p>
-              </div>
-              <button onClick={closeImport} className="text-zinc-400 hover:text-zinc-600">
-                ✕
-              </button>
-            </div>
+        <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
+          <input
+            type="file"
+            aria-label="Archivo CSV o Excel a importar"
+            accept=".csv,.xlsx,.xls"
+            onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+            className="rounded-md border border-zinc-300 p-2 text-sm"
+          />
 
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={downloadZonesTemplate}
-              className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+              onClick={closeImport}
+              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Descargar plantilla de ejemplo (.csv)
+              Cerrar
             </button>
-
-            {importSuccess && (
-              <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                {importSuccess}
-              </div>
-            )}
-
-            {importErrors.length > 0 && (
-              <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                <p className="mb-1 font-semibold">
-                  No se importó nada. Corrige estas filas e inténtalo de nuevo:
-                </p>
-                <ul className="list-inside list-disc space-y-1">
-                  {importErrors.map((e, i) => (
-                    <li key={i}>
-                      {e.row > 0 ? `Fila ${e.row}: ` : ''}
-                      {e.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-                className="rounded-md border border-zinc-300 p-2 text-sm"
-              />
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={closeImport}
-                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!importFile || importing}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {importing ? 'Importando...' : 'Importar'}
-                </button>
-              </div>
-            </form>
+            <button
+              type="submit"
+              disabled={!importFile || importing}
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {importing ? 'Importando...' : 'Importar'}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </DashboardLayout>
   )
 }

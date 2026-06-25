@@ -5,7 +5,7 @@ import logger from '../../lib/logger'
 
 const ADMIN_ROLES = ['ADMIN', 'SUPERVISOR']
 
-export type NotificationType = 'SIGNAL_BAD_STATUS' | 'MAINTENANCE_OVERDUE' | 'ASSIGNMENT'
+export type NotificationType = 'SIGNAL_BAD_STATUS' | 'MAINTENANCE_OVERDUE' | 'ASSIGNMENT' | 'MAINTENANCE_NEEDED'
 
 export const notificationFiltersSchema = z.object({
   unread_only: z.string().transform((v) => v === 'true').optional(),
@@ -104,6 +104,23 @@ export const markAllNotificationsRead = async (userId: string, roleName: string)
   const { error } = await query
   if (error) throw new Error(error.message)
   return { message: 'Notificaciones marcadas como leídas' }
+}
+
+// Vacía la bandeja: borra físicamente las notificaciones visibles para el usuario.
+// Mismo alcance que getNotificationsForUser: TECNICO/CONSULTA solo ven (y borran)
+// las suyas (user_id = userId); ADMIN/SUPERVISOR ven todas sin filtro, así que
+// vaciar su bandeja borra todas las notificaciones de la tabla — son compartidas
+// entre todos los admins, igual que ya ocurre con "marcar todas como leídas".
+export const clearAllNotifications = async (userId: string, roleName: string) => {
+  let query = supabase.from('notifications').delete().not('id', 'is', null)
+
+  if (!isAdminRole(roleName)) {
+    query = query.eq('user_id', userId)
+  }
+
+  const { error } = await query
+  if (error) throw new Error(error.message)
+  return { message: 'Bandeja de notificaciones vaciada' }
 }
 
 interface CreateNotificationInput {

@@ -13,13 +13,32 @@ export const createMaintenanceSchema = z.object({
   assigned_to: z.string().uuid().optional(),
 })
 
+// El estado del mantenimiento ya NO se puede cambiar por aquí: solo el técnico
+// asignado (o ADMIN/SUPERVISOR como respaldo) puede cambiarlo, y únicamente a
+// través de POST /api/maintenances/:id/complete (con observaciones + foto de
+// evidencia obligatorias). Este update genérico solo permite editar los demás
+// campos (descripción, costo, fecha, reasignar).
 export const updateMaintenanceSchema = z.object({
-  status: z.enum(['PENDIENTE', 'EN_PROCESO', 'COMPLETADO']).optional(),
   description: z.string().trim().optional(),
   cost: z.number().positive().optional(),
   maintenance_date: z.string().optional(),
   assigned_to: z.string().uuid().optional(),
 })
+
+// Usado por el técnico (o ADMIN/SUPERVISOR) para marcar el mantenimiento como
+// realizado: estado, observaciones y foto obligatorios. Si queda COMPLETADO,
+// además se exige el estado resultante de la señal para propagarlo (igual que
+// en inspecciones).
+export const completeMaintenanceSchema = z
+  .object({
+    status: z.enum(['PENDIENTE', 'EN_PROCESO', 'COMPLETADO']),
+    observations: z.string().trim().min(1, 'Las observaciones son obligatorias'),
+    signal_status: z.enum(['BUENO', 'REGULAR', 'DETERIORADO', 'CAIDO', 'DESAPARECIDO']).optional(),
+  })
+  .refine((data) => data.status !== 'COMPLETADO' || !!data.signal_status, {
+    message: 'Debes indicar el estado resultante de la señal al completar el mantenimiento',
+    path: ['signal_status'],
+  })
 
 export const maintenanceFiltersSchema = z.object({
   signal_id: z.string().uuid().optional(),
@@ -34,9 +53,10 @@ type UpdateMaintenanceDTO = z.infer<typeof updateMaintenanceSchema>
 type MaintenanceFilters = z.infer<typeof maintenanceFiltersSchema>
 
 const MAINTENANCE_SELECT = `
-  id, status, description, cost, maintenance_date, completed_at, created_at,
+  id, signal_id, assigned_to, status, description, cost, maintenance_date, completed_at, observations, created_at,
   signals(id, signal_code, address),
-  users(id, full_name)
+  users(id, full_name),
+  evidences(id, image_url, description, created_at)
 `
 
 export const getMaintenances = async (filters: MaintenanceFilters) => {
@@ -88,7 +108,36 @@ export const createMaintenance = async (data: CreateMaintenanceDTO, assignedTo: 
 export const updateMaintenance = async (id: string, data: UpdateMaintenanceDTO) => {
   await getMaintenanceById(id)
 
-  const updateData: Record<string, unknown> = { ...data }
+  const { data: maintenance, error } = await supabase
+    .from('maintenances')
+    .update(data)
+    .eq('id', id)
+    .select(MAINTENANCE_SELECT)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return maintenance
+}
+
+type CompleteMaintenanceDTO = z.infer<typeof completeMaintenanceSchema>
+
+// Marca el mantenimiento como realizado: actualiza estado/observaciones
+// (completed_at se autocompleta si queda COMPLETADO), propaga el estado
+// resultante a la señal asociada cuando corresponde, y guarda la foto subida
+// como evidencia.
+export const completeMaintenance = async (
+  id: string,
+  data: CompleteMaintenanceDTO,
+  evidenceImageUrl: string,
+  uploadedBy: string
+) => {
+  const existing = await getMaintenanceById(id)
+  const signalId = (existing as { signal_id?: string }).signal_id
+
+  const updateData: Record<string, unknown> = {
+    status: data.status,
+    observations: data.observations,
+  }
   if (data.status === 'COMPLETADO') {
     updateData.completed_at = new Date().toISOString()
   }
@@ -101,6 +150,24 @@ export const updateMaintenance = async (id: string, data: UpdateMaintenanceDTO) 
     .single()
 
   if (error) throw new Error(error.message)
+
+  if (data.status === 'COMPLETADO' && data.signal_status && signalId) {
+    const { error: signalError } = await supabase
+      .from('signals')
+      .update({ status: data.signal_status, last_maintenance_date: new Date().toISOString().slice(0, 10) })
+      .eq('id', signalId)
+    if (signalError) throw new Error(signalError.message)
+  }
+
+  const { error: evidenceError } = await supabase.from('evidences').insert({
+    maintenance_id: id,
+    signal_id: signalId ?? null,
+    uploaded_by: uploadedBy,
+    image_url: evidenceImageUrl,
+    description: data.observations,
+  })
+  if (evidenceError) throw new Error(evidenceError.message)
+
   return maintenance
 }
 

@@ -11,10 +11,12 @@ router.use(verifyToken) // todas las rutas de señales requieren autenticación
 router.get('/', list)
 router.get('/:id', getOne)
 
-// Escritura: solo ADMIN y SUPERVISOR pueden gestionar el catálogo de señales
-router.post('/', requireRole('ADMIN', 'SUPERVISOR'), create)
+// Escritura: ADMIN y SUPERVISOR gestionan el catálogo completo; TECNICO puede
+// registrar/editar señales en campo, pero no desactivarlas, borrarlas ni
+// hacer carga masiva (eso sigue exclusivo de ADMIN/SUPERVISOR).
+router.post('/', requireRole('ADMIN', 'SUPERVISOR', 'TECNICO'), create)
 router.post('/bulk-import', requireRole('ADMIN', 'SUPERVISOR'), upload.single('file'), bulkImport)
-router.put('/:id', requireRole('ADMIN', 'SUPERVISOR'), update)
+router.put('/:id', requireRole('ADMIN', 'SUPERVISOR', 'TECNICO'), update)
 router.patch('/:id/toggle-active', requireRole('ADMIN', 'SUPERVISOR'), toggleActive)
 router.delete('/:id', requireRole('ADMIN', 'SUPERVISOR'), remove)
 

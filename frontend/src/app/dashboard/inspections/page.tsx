@@ -5,14 +5,20 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import Modal from '@/components/Modal'
+import Pagination from '@/components/Pagination'
 
 interface Inspection {
   id: string
+  signal_id: string
   status: 'BUENO' | 'REGULAR' | 'DETERIORADO' | 'CAIDO' | 'DESAPARECIDO'
   observations: string | null
+  evidence_image?: string | null
   inspection_date: string | null
+  needs_maintenance?: boolean
   signals: { signal_code: string; address: string | null } | null
   users: { full_name: string } | null
+  evidences?: { id: string; image_url: string; description: string | null; created_at: string }[]
 }
 
 interface InspectionsResponse {
@@ -61,6 +67,7 @@ export default function InspectionsPage() {
   const [signals, setSignals] = useState<{ id: string; signal_code: string }[]>([])
   const [technicians, setTechnicians] = useState<{ id: string; full_name: string }[]>([])
   const [form, setForm] = useState({ signal_id: '', status: 'BUENO', observations: '', latitude: '', longitude: '', technician_id: '' })
+  const [detailTarget, setDetailTarget] = useState<Inspection | null>(null)
 
   const fetchInspections = useCallback(async () => {
     try {
@@ -87,9 +94,10 @@ export default function InspectionsPage() {
   }, [showForm, signals.length])
 
   useEffect(() => {
+    // Una inspección la puede ejecutar un SUPERVISOR o un TECNICO, pero nunca el ADMIN.
     if (showForm && canAssign && technicians.length === 0) {
-      api.get<{ data: { id: string; full_name: string }[] }>('/api/users?limit=200&is_active=true')
-        .then((res) => setTechnicians(res.data))
+      api.get<{ data: { id: string; full_name: string; roles?: { name: string } | null }[] }>('/api/users?limit=200&is_active=true')
+        .then((res) => setTechnicians(res.data.filter((u) => u.roles?.name === 'SUPERVISOR' || u.roles?.name === 'TECNICO')))
     }
   }, [showForm, canAssign, technicians.length])
 
@@ -142,16 +150,16 @@ export default function InspectionsPage() {
               </div>
             )}
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Señal *</label>
-              <select required value={form.signal_id} onChange={(e) => setForm((f) => ({ ...f, signal_id: e.target.value }))}
+              <label htmlFor="inspection-signal" className="mb-1 block text-sm font-medium text-zinc-700">Señal *</label>
+              <select id="inspection-signal" required value={form.signal_id} onChange={(e) => setForm((f) => ({ ...f, signal_id: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="">Seleccionar señal…</option>
                 {signals.map((s) => <option key={s.id} value={s.id}>{s.signal_code}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Estado observado *</label>
-              <select required value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+              <label htmlFor="inspection-status" className="mb-1 block text-sm font-medium text-zinc-700">Estado observado *</label>
+              <select id="inspection-status" required value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                 <option value="BUENO">Bueno</option>
                 <option value="REGULAR">Regular</option>
@@ -162,8 +170,8 @@ export default function InspectionsPage() {
             </div>
             {canAssign && (
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
-                <select required value={form.technician_id} onChange={(e) => setForm((f) => ({ ...f, technician_id: e.target.value }))}
+                <label htmlFor="inspection-technician" className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
+                <select id="inspection-technician" required value={form.technician_id} onChange={(e) => setForm((f) => ({ ...f, technician_id: e.target.value }))}
                   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
                   <option value="">Seleccionar técnico…</option>
                   {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
@@ -171,18 +179,18 @@ export default function InspectionsPage() {
               </div>
             )}
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Latitud GPS</label>
-              <input type="number" step="any" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}
+              <label htmlFor="inspection-latitude" className="mb-1 block text-sm font-medium text-zinc-700">Latitud GPS</label>
+              <input id="inspection-latitude" type="number" step="any" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Longitud GPS</label>
-              <input type="number" step="any" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))}
+              <label htmlFor="inspection-longitude" className="mb-1 block text-sm font-medium text-zinc-700">Longitud GPS</label>
+              <input id="inspection-longitude" type="number" step="any" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Observaciones</label>
-              <textarea rows={2} value={form.observations} onChange={(e) => setForm((f) => ({ ...f, observations: e.target.value }))}
+              <label htmlFor="inspection-observations" className="mb-1 block text-sm font-medium text-zinc-700">Observaciones</label>
+              <textarea id="inspection-observations" rows={2} value={form.observations} onChange={(e) => setForm((f) => ({ ...f, observations: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
             </div>
             <div className="sm:col-span-2 flex gap-3">
@@ -197,7 +205,7 @@ export default function InspectionsPage() {
 
       {/* Filters */}
       <div className="mb-4 flex gap-3">
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+        <select aria-label="Filtrar por estado" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
           <option value="">Todos los estados</option>
           <option value="BUENO">Bueno</option>
@@ -228,17 +236,19 @@ export default function InspectionsPage() {
                 <th className="px-5 py-3 font-semibold">Técnico</th>
                 <th className="px-5 py-3 font-semibold">Fecha</th>
                 <th className="px-5 py-3 font-semibold">Observaciones</th>
+                <th className="px-5 py-3 font-semibold">Mantenimiento</th>
+                <th className="px-5 py-3 font-semibold">Detalle</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>{Array.from({ length: 6 }).map((_, j) => (
+                  <tr key={i}>{Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-5 py-4"><div className="h-4 animate-pulse rounded bg-zinc-100" /></td>
                   ))}</tr>
                 ))
               ) : inspections.length === 0 ? (
-                <tr><td colSpan={6} className="px-5 py-10 text-center text-zinc-400">No hay inspecciones registradas</td></tr>
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-zinc-400">No hay inspecciones registradas</td></tr>
               ) : (
                 inspections.map((insp) => (
                   <tr key={insp.id} className="hover:bg-zinc-50">
@@ -256,24 +266,111 @@ export default function InspectionsPage() {
                         : '—'}
                     </td>
                     <td className="px-5 py-4 text-zinc-600 max-w-[200px] truncate">{insp.observations ?? '—'}</td>
+                    <td className="px-5 py-4">
+                      {insp.needs_maintenance ? (
+                        <button
+                          onClick={() => router.push(`/dashboard/maintenances?signal_id=${insp.signal_id}`)}
+                          className="rounded-full bg-sky-100 px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-200"
+                          title="El técnico reportó que esta señal necesita mantenimiento"
+                        >
+                          Necesita · Asignar
+                        </button>
+                      ) : (
+                        <span className="text-xs text-zinc-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
+                      <button
+                        onClick={() => setDetailTarget(insp)}
+                        className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+                      >
+                        Ver
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-3">
-            <span className="text-xs text-zinc-500">Página {page} de {totalPages}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Anterior</button>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50">Siguiente</button>
-            </div>
-          </div>
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      </div>
+
+      {detailTarget && (
+        <InspectionDetailModal inspection={detailTarget} onClose={() => setDetailTarget(null)} />
+      )}
+    </DashboardLayout>
+  )
+}
+
+function InspectionDetailModal({ inspection, onClose }: { inspection: Inspection; onClose: () => void }) {
+  // La foto puede venir como evidence_image directo en la inspección o, si hay
+  // varias evidencias asociadas, en el arreglo evidences (mismo patrón que mantenimientos).
+  const photoUrl = inspection.evidence_image ?? inspection.evidences?.[0]?.image_url ?? null
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      titleId="inspection-detail-title"
+      title={
+        <>
+          Detalle de la inspección
+          <span className="ml-2 block text-sm font-normal text-zinc-500 sm:inline">
+            Señal {inspection.signals?.signal_code ?? '—'} · {inspection.users?.full_name ?? '—'}
+          </span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div>
+          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_COLORS[inspection.status]}`}>
+            {STATUS_LABELS[inspection.status]}
+          </span>
+          {inspection.inspection_date && (
+            <span className="ml-2 text-xs text-zinc-500">
+              {new Date(inspection.inspection_date).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-700">Observaciones del técnico</p>
+          <p className="whitespace-pre-wrap rounded-md bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            {inspection.observations || 'Sin observaciones'}
+          </p>
+        </div>
+
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-700">Foto de evidencia</p>
+          {photoUrl ? (
+            <a href={photoUrl} target="_blank" rel="noopener noreferrer">
+              <img
+                src={photoUrl}
+                alt="Evidencia de la inspección"
+                className="max-h-80 w-full rounded-md border border-zinc-200 object-contain"
+              />
+            </a>
+          ) : (
+            <p className="text-sm text-zinc-400">No hay foto registrada</p>
+          )}
+        </div>
+
+        {inspection.needs_maintenance && (
+          <p className="rounded-md bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">
+            El técnico reportó que esta señal necesita mantenimiento.
+          </p>
         )}
       </div>
-    </DashboardLayout>
+
+      <div className="mt-5 flex justify-end">
+        <button
+          onClick={onClose}
+          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Cerrar
+        </button>
+      </div>
+    </Modal>
   )
 }

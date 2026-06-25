@@ -197,7 +197,7 @@ export default function Sidebar() {
       </aside>
 
       {/* Sidebar de escritorio (>=1024px): colapsado a iconos, se expande con hover */}
-      <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-hidden border-r border-zinc-200 bg-zinc-950 px-3 py-6 text-white transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
+      <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-x-hidden overflow-y-auto border-r border-zinc-200 bg-zinc-950 px-3 py-6 text-white transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
       <div className="mb-10 overflow-hidden whitespace-nowrap">
         <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           Inventario vial
@@ -208,7 +208,7 @@ export default function Sidebar() {
         </h1>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-hidden">
+      <nav className="flex-1 space-y-1 overflow-x-hidden">
         {visibleNavItems.map((item) => {
           const isActive =
             item.href === '/dashboard'

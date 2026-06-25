@@ -6,6 +6,8 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import Modal from '@/components/Modal'
+import Pagination from '@/components/Pagination'
 
 interface Signal {
   id: string
@@ -74,7 +76,10 @@ export default function SignalsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const toast = useToast()
+  // canWrite: gestión completa del catálogo (desactivar, carga masiva) — ADMIN/SUPERVISOR.
+  // canCreateEdit: registrar/editar señales en campo — además TECNICO.
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
+  const canCreateEdit = canWrite || user?.roles?.name === 'TECNICO'
 
   useEffect(() => {
     if (user && user.roles?.name === 'CONSULTA') router.replace('/dashboard')
@@ -159,6 +164,7 @@ export default function SignalsPage() {
     setImportSuccess(null)
   }
 
+
   const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!importFile) return
@@ -197,14 +203,16 @@ export default function SignalsPage() {
       title="Señales"
       subtitle="Inventario vial"
       actions={
-        canWrite ? (
+        canCreateEdit ? (
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowImport(true)}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 sm:px-4"
-            >
-              Importar CSV/Excel
-            </button>
+            {canWrite && (
+              <button
+                onClick={() => setShowImport(true)}
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 sm:px-4"
+              >
+                Importar CSV/Excel
+              </button>
+            )}
             <a
               href="/dashboard/signals/new"
               className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:px-4"
@@ -219,12 +227,14 @@ export default function SignalsPage() {
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           type="text"
+          aria-label="Buscar por código o dirección"
           placeholder="Buscar por código o dirección…"
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 sm:w-72"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
+          aria-label="Filtrar por estado"
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 sm:w-auto"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -336,7 +346,7 @@ export default function SignalsPage() {
                         >
                           Ver
                         </button>
-                        {canWrite && (
+                        {canCreateEdit && (
                           <button
                             onClick={() => router.push(`/dashboard/signals/${signal.id}/edit`)}
                             className="text-zinc-600 hover:underline text-xs font-medium"
@@ -353,106 +363,72 @@ export default function SignalsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-3">
-            <span className="text-xs text-zinc-500">
-              Página {page} de {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium disabled:opacity-40 hover:bg-zinc-50"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-zinc-950">Importar señales</h2>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Sube un archivo CSV o Excel (.xlsx). Si alguna fila tiene un error, no se
-                  importa ninguna señal del archivo.
-                </p>
-              </div>
-              <button onClick={closeImport} className="text-zinc-400 hover:text-zinc-600">
-                ✕
-              </button>
-            </div>
+      <Modal isOpen={showImport} onClose={closeImport} titleId="import-signals-title" title="Importar señales">
+        <p className="mb-4 text-sm text-zinc-500">
+          Sube un archivo CSV o Excel (.xlsx). Si alguna fila tiene un error, no se
+          importa ninguna señal del archivo.
+        </p>
 
+        <button
+          type="button"
+          onClick={downloadTemplate}
+          className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+        >
+          Descargar plantilla de ejemplo (.csv)
+        </button>
+
+        {importSuccess && (
+          <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {importSuccess}
+          </div>
+        )}
+
+        {importErrors.length > 0 && (
+          <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="mb-1 font-semibold">
+              No se importó nada. Corrige estas filas e inténtalo de nuevo:
+            </p>
+            <ul className="list-inside list-disc space-y-1">
+              {importErrors.map((e, i) => (
+                <li key={i}>
+                  {e.row > 0 ? `Fila ${e.row}: ` : ''}
+                  {e.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
+          <input
+            type="file"
+            aria-label="Archivo CSV o Excel a importar"
+            accept=".csv,.xlsx,.xls"
+            onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+            className="rounded-md border border-zinc-300 p-2 text-sm"
+          />
+
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={downloadTemplate}
-              className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+              onClick={closeImport}
+              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              Descargar plantilla de ejemplo (.csv)
+              Cerrar
             </button>
-
-            {importSuccess && (
-              <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                {importSuccess}
-              </div>
-            )}
-
-            {importErrors.length > 0 && (
-              <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                <p className="mb-1 font-semibold">
-                  No se importó nada. Corrige estas filas e inténtalo de nuevo:
-                </p>
-                <ul className="list-inside list-disc space-y-1">
-                  {importErrors.map((e, i) => (
-                    <li key={i}>
-                      {e.row > 0 ? `Fila ${e.row}: ` : ''}
-                      {e.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <form onSubmit={handleImportSubmit} className="flex flex-col gap-4">
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-                className="rounded-md border border-zinc-300 p-2 text-sm"
-              />
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={closeImport}
-                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!importFile || importing}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {importing ? 'Importando...' : 'Importar'}
-                </button>
-              </div>
-            </form>
+            <button
+              type="submit"
+              disabled={!importFile || importing}
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {importing ? 'Importando...' : 'Importar'}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
     </DashboardLayout>
   )
 }

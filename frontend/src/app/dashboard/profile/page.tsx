@@ -127,23 +127,23 @@ export default function ProfilePage() {
             )}
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
-              <input required value={infoForm.full_name} onChange={(e) => setInfoForm((f) => ({ ...f, full_name: e.target.value }))}
+              <label htmlFor="profile-full-name" className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
+              <input id="profile-full-name" required value={infoForm.full_name} onChange={(e) => setInfoForm((f) => ({ ...f, full_name: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
-              <input value={infoForm.phone} onChange={(e) => setInfoForm((f) => ({ ...f, phone: e.target.value }))}
+              <label htmlFor="profile-phone" className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
+              <input id="profile-phone" value={infoForm.phone} onChange={(e) => setInfoForm((f) => ({ ...f, phone: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
-              <input value={infoForm.municipality} onChange={(e) => setInfoForm((f) => ({ ...f, municipality: e.target.value }))}
+              <label htmlFor="profile-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
+              <input id="profile-municipality" value={infoForm.municipality} onChange={(e) => setInfoForm((f) => ({ ...f, municipality: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
-              <input value={infoForm.position} onChange={(e) => setInfoForm((f) => ({ ...f, position: e.target.value }))}
+              <label htmlFor="profile-position" className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
+              <input id="profile-position" value={infoForm.position} onChange={(e) => setInfoForm((f) => ({ ...f, position: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Opcional" />
             </div>
 
@@ -168,20 +168,20 @@ export default function ProfilePage() {
             )}
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Contraseña actual *</label>
-              <input required type="password" value={pwForm.current_password}
+              <label htmlFor="profile-current-password" className="mb-1 block text-sm font-medium text-zinc-700">Contraseña actual *</label>
+              <input id="profile-current-password" required type="password" value={pwForm.current_password}
                 onChange={(e) => setPwForm((f) => ({ ...f, current_password: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Nueva contraseña *</label>
-              <input required type="password" minLength={6} value={pwForm.new_password}
+              <label htmlFor="profile-new-password" className="mb-1 block text-sm font-medium text-zinc-700">Nueva contraseña *</label>
+              <input id="profile-new-password" required type="password" minLength={6} value={pwForm.new_password}
                 onChange={(e) => setPwForm((f) => ({ ...f, new_password: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Confirmar nueva contraseña *</label>
-              <input required type="password" minLength={6} value={pwForm.confirm_password}
+              <label htmlFor="profile-confirm-password" className="mb-1 block text-sm font-medium text-zinc-700">Confirmar nueva contraseña *</label>
+              <input id="profile-confirm-password" required type="password" minLength={6} value={pwForm.confirm_password}
                 onChange={(e) => setPwForm((f) => ({ ...f, confirm_password: e.target.value }))}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
             </div>

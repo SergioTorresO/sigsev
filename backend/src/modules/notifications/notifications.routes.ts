@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { verifyToken } from '../../middlewares/auth.middleware'
 import { requireRole } from '../../middlewares/requireRole.middleware'
-import { list, unreadCount, markRead, markAllRead } from './notifications.controller'
+import { list, unreadCount, markRead, markAllRead, clearAll } from './notifications.controller'
 
 const router = Router()
 
@@ -15,5 +15,6 @@ router.get('/', list)
 router.get('/unread-count', unreadCount)
 router.patch('/:id/read', markRead)
 router.patch('/read-all', markAllRead)
+router.delete('/clear-all', clearAll)
 
 export default router

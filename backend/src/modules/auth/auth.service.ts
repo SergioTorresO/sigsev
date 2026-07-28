@@ -96,7 +96,7 @@ export const loginUser = async ({ email, password }: LoginDTO) => {
   return { token, user: safeUser }
 }
 
-export const requestPasswordReset = async ({ email }: ForgotPasswordDTO) => {
+export const requestPasswordReset = async ({ email }: ForgotPasswordDTO, frontendUrl?: string) => {
   const { data: user, error } = await supabase
     .from('users')
     .select('id, is_active')
@@ -121,8 +121,8 @@ export const requestPasswordReset = async ({ email }: ForgotPasswordDTO) => {
 
   if (updateError) throw new Error(updateError.message)
 
-  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000'
-  const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`
+  const resolvedFrontendUrl = frontendUrl ?? process.env.FRONTEND_URL ?? 'http://localhost:3000'
+  const resetLink = `${resolvedFrontendUrl}/reset-password?token=${rawToken}`
 
   if (isEmailConfigured()) {
     await sendPasswordResetEmail(email, resetLink)

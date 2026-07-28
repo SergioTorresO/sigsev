@@ -105,7 +105,10 @@ export const forgotPassword = async (
   try {
 
     const { email } = forgotPasswordSchema.parse(req.body)
-    const data = await requestPasswordReset({ email })
+    // Usa el Origin del request para que el link funcione en cualquier entorno
+    // (localhost, devtunnels, producción) sin tocar .env cada vez.
+    const frontendUrl = (req.headers.origin as string | undefined) ?? undefined
+    const data = await requestPasswordReset({ email }, frontendUrl)
 
     return res.status(200).json(data)
 

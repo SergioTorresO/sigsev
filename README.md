@@ -38,12 +38,13 @@ git clone <url-del-repositorio>
 cd sigsev-project
 ```
 
-### 1. Backend
+Este repo es un workspace de pnpm (`pnpm-workspace.yaml` en la raíz incluye `backend` y `frontend`). Instala todo desde la raíz con un solo comando:
 
 ```bash
-cd backend
-npm install
+pnpm install
 ```
+
+### 1. Backend
 
 Crea `backend/.env` con:
 
@@ -56,15 +57,10 @@ PORT=4000
 ```
 
 ```bash
-npm run dev   # http://localhost:4000
+pnpm --filter sigsev-backend dev   # http://localhost:4000
 ```
 
 ### 2. Frontend
-
-```bash
-cd frontend
-npm install
-```
 
 Crea `frontend/.env.local` con:
 
@@ -73,7 +69,13 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
 
 ```bash
-npm run dev   # http://localhost:3000
+pnpm --filter sigsev-frontend dev   # http://localhost:3000
+```
+
+### 3. Ambos a la vez
+
+```bash
+pnpm dev   # levanta backend y frontend juntos (concurrently)
 ```
 
 ## Roles del sistema

@@ -227,12 +227,15 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 - [ ] **Verificación de dominio personalizado** para el envío de correos de notificación en producción (Resend) — pendiente de retomar
 
 ## Cómo correr el proyecto
+Gestor de paquetes: **pnpm** (workspace definido en `pnpm-workspace.yaml`, paquetes `backend` y `frontend`). Instalar todo desde la raíz con `pnpm install`.
+
 ```bash
 # Backend
-cd backend
-npm run dev   # ts-node-dev src/server.ts en puerto 4000
+pnpm --filter sigsev-backend dev   # ts-node-dev src/server.ts en puerto 4000
 
 # Frontend (otra terminal)
-cd frontend
-npm run dev   # Next.js en puerto 3000
+pnpm --filter sigsev-frontend dev   # Next.js en puerto 3000
+
+# O ambos a la vez desde la raíz
+pnpm dev
 ```

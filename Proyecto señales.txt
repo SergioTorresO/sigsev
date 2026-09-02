@@ -1,0 +1,234 @@
+Quiero desarrollar una aplicación web profesional, moderna y escalable enfocada en la gestión de señalización vial para tránsito, orientada al control y visualización de señales de tránsito en zonas urbanas y rurales.
+
+El sistema debe funcionar como una plataforma inteligente de gestión vial utilizada por alcaldías, secretarías de tránsito y operadores de movilidad.
+
+OBJETIVO PRINCIPAL:
+Crear un sistema web capaz de registrar, visualizar, administrar y monitorear todas las las señales de tránsito del casco urbano y rural mediante mapas interactivos, paneles administrativos y herramientas de inspección técnica.
+
+REQUISITOS GENERALES:
+- Diseño moderno y profesional
+- Responsive (PC, tablet y móvil)
+- Arquitectura escalable
+- Seguridad robusta
+- Interfaz intuitiva
+- Optimizado para rendimiento
+- Código limpio y modular
+
+TECNOLOGÍAS RECOMENDADAS:
+Frontend:
+- React
+- Next.js
+- TailwindCSS
+- TypeScript
+
+Backend:
+- Node.js + Express
+
+Base de datos:
+- PostgreSQL
+- PostGIS para manejo geográfico
+
+Mapas:
+- Leaflet
+o
+- Mapbox
+
+Autenticación:
+- JWT
+o
+- Supabase Auth
+
+Hosting:
+- Vercel para frontend
+- Railway / Render / VPS para backend
+
+FUNCIONALIDADES PRINCIPALES:
+
+1. AUTENTICACIÓN Y LOGIN
+- Inicio de sesión
+- Recuperación de contraseña
+- Roles y permisos
+- Protección de rutas
+- Sesiones seguras
+- Logout
+
+ROLES:
+- Administrador
+- Supervisor
+- Técnico de campo
+- Usuario consulta (opcional)
+
+2. DASHBOARD ADMINISTRATIVO
+Debe incluir:
+- Estadísticas generales
+- Total de señales
+- Señales activas
+- Señales dañadas
+- Señales pendientes de mantenimiento
+- Reportes gráficos
+- Actividad reciente
+- Alertas
+
+Gráficos:
+- Señales por tipo
+- Señales por estado
+- Señales por zona
+- Reportes mensuales
+- Historial de mantenimientos
+
+3. MAPA INTERACTIVO GIS
+La plataforma debe tener un mapa principal interactivo.
+
+FUNCIONES:
+- Visualización geográfica de señales
+- Marcadores dinámicos
+- Zoom urbano y rural
+- Filtros avanzados
+- Capas del mapa
+- Búsqueda por ubicación
+- Geolocalización GPS
+- Vista satelital
+- Agrupación de marcadores
+- Popup con información detallada
+
+FILTROS:
+- Tipo de señal
+- Estado
+- Municipio
+- Zona
+- Fecha
+- Prioridad
+
+4. GESTIÓN DE SEÑALIZACIONES
+Cada señal debe contener:
+
+- ID único
+- Código interno
+- Tipo de señal
+- Categoría
+- Imagen/fotografía
+- Coordenadas GPS
+- Dirección
+- Zona urbana o rural
+- Estado de conservación
+- Fecha de instalación
+- Fecha de mantenimiento
+- Responsable
+- Observaciones técnicas
+
+ESTADOS:
+- Bueno
+- Regular
+- Deteriorado
+- Caído
+- Desaparecido
+
+FUNCIONES:
+- Crear señal
+- Editar señal
+- Eliminar señal
+- Ver historial
+- Adjuntar imágenes
+- Registrar mantenimiento
+
+5. INVENTARIO VIAL
+- Gestión completa de inventario
+- Conteo automático
+- Estado de activos
+- Historial de cambios
+- Reportes automáticos
+- Seguimiento de mantenimiento
+
+6. SISTEMA DE INSPECCIONES
+Los técnicos deben poder:
+- Registrar inspecciones
+- Tomar fotografías
+- Subir evidencias
+- Actualizar estados
+- Registrar novedades
+- Agregar observaciones
+- Registrar mantenimientos realizados
+
+7. REPORTES Y EXPORTACIONES
+Generar:
+- Reportes PDF
+- Exportación Excel
+- Informes técnicos
+- Reportes estadísticos
+- Reportes por zona
+- Reportes por estado
+
+8. PANEL DE USUARIOS
+- Gestión de usuarios
+- Roles y permisos
+- Actividad del usuario
+- Control de acceso
+
+9. NOTIFICACIONES Y ALERTAS
+- Señales deterioradas
+- Mantenimientos pendientes
+- Nuevas incidencias
+- Alertas administrativas
+
+10. DISEÑO UI/UX
+Quiero una interfaz:
+- Moderna
+- Minimalista
+- Profesional
+- Estilo dashboard gubernamental
+- Animaciones suaves
+- Modo oscuro
+- Sidebar profesional
+- Cards modernas
+- Tablas avanzadas
+- Gráficos interactivos
+
+11. ESTRUCTURA TÉCNICA
+Quiero:
+- Arquitectura limpia
+- Separación frontend/backend
+- API REST
+- Código escalable
+- Buenas prácticas
+- Modularización
+- Validaciones
+- Manejo de errores
+- Logs
+- Seguridad backend
+
+12. BASE DE DATOS
+Diseña:
+- Modelo relacional completo
+- Relaciones optimizadas
+- Tablas normalizadas
+- Soporte geográfico con PostGIS
+
+13. EXTRA (OPCIONAL)
+Me gustaría agregar en el futuro:
+- Inteligencia artificial para detectar señales dañadas
+- Automatizaciones con n8n
+- Aplicación móvil
+- Sistema offline
+- Dashboard en Power BI
+- Integración con cámaras
+- Predicción de mantenimiento
+
+LO QUE NECESITO:
+Quiero que generes:
+1. Arquitectura completa del sistema
+2. Diseño de base de datos
+3. Estructura de carpetas
+4. Diseño UI/UX
+5. Wireframes
+6. Flujo del sistema
+7. Tecnologías ideales
+8. API endpoints
+9. Modelo entidad relación
+10. Recomendaciones profesionales
+11. Roadmap de desarrollo
+12. Código inicial del proyecto
+13. Diseño profesional del dashboard
+14. Buenas prácticas de seguridad
+15. Estructura escalable tipo software empresarial
+
+Quiero que el proyecto tenga apariencia corporativa y profesional, similar a plataformas modernas de gestión gubernamental y GIS.

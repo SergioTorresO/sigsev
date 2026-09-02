@@ -24,6 +24,7 @@ const ICONS: Record<string, string> = {
   Reportes: 'M7 3h7l3 3v15H7V3Zm7 0v3h3M9 13h6M9 17h6M9 9h2',
   Usuarios: 'M16 14a4 4 0 1 0-8 0M3 21a7 7 0 0 1 18 0M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   Auditoría: 'M9 12h6m-6 4h6M5 4h14v16l-4-3-3 2-3-2-4 3V4Z',
+  Catálogo: 'M4 6h16M4 10h16M4 14h8M4 18h8M15 15l2 2 4-4',
 }
 
 const navItems = [
@@ -38,6 +39,7 @@ const navItems = [
 ]
 
 const adminItems = [
+  { label: 'Catálogo', href: '/dashboard/admin/catalogo' },
   { label: 'Usuarios', href: '/dashboard/admin/users' },
   { label: 'Auditoría', href: '/dashboard/admin/audit' },
 ]

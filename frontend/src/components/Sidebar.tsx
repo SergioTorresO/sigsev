@@ -79,15 +79,85 @@ export default function Sidebar() {
     ? navItems.filter((item) => allowedHrefs.includes(item.href))
     : navItems
 
+  // Marca/logo: badge emerald con "S" + wordmark, reutilizado en drawer y sidebar de escritorio
+  // (función simple, no componente, para no remontar estos nodos en cada re-render de Sidebar)
+  const renderLogo = (collapsed = false) => (
+    <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-bold text-zinc-950 shadow-lg shadow-emerald-500/20">
+        S
+      </div>
+      <div className={collapsed ? 'hidden group-hover:block' : ''}>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/90">
+          Inventario vial
+        </p>
+        <h1 className="-mt-0.5 text-xl font-bold text-white">SIGSEV</h1>
+      </div>
+    </div>
+  )
+
+  // Ítem de navegación: pill emerald sólido cuando está activo, hover sutil en zinc cuando no
+  const renderNavLink = (
+    item: { label: string; href: string },
+    isActive: boolean,
+    collapsed = false,
+  ) => (
+    <a
+      key={item.label}
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-150 ${
+        isActive
+          ? 'bg-emerald-500 text-zinc-950 shadow-md shadow-emerald-500/30'
+          : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100'
+      }`}
+    >
+      <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
+      <span className={collapsed ? 'opacity-0 transition-opacity duration-150 group-hover:opacity-100' : ''}>
+        {item.label}
+      </span>
+    </a>
+  )
+
+  const renderProfileFooter = (collapsed = false) => (
+    <div className="border-t border-zinc-800/80 pt-4">
+      <a
+        href="/dashboard/profile"
+        title={collapsed ? user?.full_name : undefined}
+        className={`flex items-center gap-3 overflow-hidden rounded-lg px-2 py-2 transition-colors hover:bg-zinc-800/70 ${
+          pathname.startsWith('/dashboard/profile') ? 'bg-zinc-800/70' : ''
+        }`}
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-semibold text-zinc-950 shadow-md shadow-emerald-500/20 ring-2 ring-zinc-800">
+          {user?.full_name?.charAt(0).toUpperCase() ?? '?'}
+        </div>
+        <div className={`min-w-0 ${collapsed ? 'opacity-0 transition-opacity duration-150 group-hover:opacity-100' : ''}`}>
+          <p className="truncate text-sm font-medium text-zinc-100">{user?.full_name}</p>
+          <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+          <p className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-emerald-400">
+            {user?.roles?.name ?? 'Sin rol'}
+          </p>
+        </div>
+      </a>
+      <button
+        onClick={handleLogout}
+        title={collapsed ? 'Cerrar sesión' : undefined}
+        className="mt-3 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-zinc-800 px-2.5 py-2 text-xs font-medium text-zinc-400 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+      >
+        <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-4 w-4 shrink-0" />
+        <span className={collapsed ? 'hidden group-hover:inline' : ''}>Cerrar sesión</span>
+      </button>
+    </div>
+  )
+
   return (
     <>
       {/* Barra superior móvil/tablet (<1024px) */}
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200 bg-zinc-950 px-4 text-white lg:hidden">
+      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 text-white shadow-sm lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Abrir menú de navegación"
-          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-zinc-800"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white"
         >
           <Icon path="M4 6h16M4 12h16M4 18h16" className="h-6 w-6" />
         </button>
@@ -98,7 +168,7 @@ export default function Sidebar() {
       {/* Fondo oscuro tras el drawer móvil */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
@@ -106,22 +176,17 @@ export default function Sidebar() {
 
       {/* Drawer móvil/tablet: mismas opciones que el sidebar de escritorio, siempre expandido */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-zinc-200 bg-zinc-950 px-5 py-6 text-white transition-transform duration-200 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-950 px-5 py-6 text-white shadow-2xl transition-transform duration-200 ease-in-out lg:hidden ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300">
-              Inventario vial
-            </p>
-            <h1 className="mt-1 text-2xl font-bold">SIGSEV</h1>
-          </div>
+          {renderLogo()}
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
             aria-label="Cerrar menú de navegación"
-            className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-zinc-800"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white"
           >
             <Icon path="M6 6l12 12M18 6 6 18" className="h-5 w-5" />
           </button>
@@ -133,81 +198,28 @@ export default function Sidebar() {
               item.href === '/dashboard'
                 ? pathname === '/dashboard'
                 : pathname.startsWith(item.href)
-            return (
-              <a
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-white text-zinc-950' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                }`}
-              >
-                <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
-                <span>{item.label}</span>
-              </a>
-            )
+            return renderNavLink(item, isActive)
           })}
           {user?.roles?.name === 'ADMIN' && (
             <>
-              <p className="mt-4 truncate px-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              <p className="mt-5 mb-1 truncate border-t border-zinc-800/80 px-2.5 pt-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
                 Administración
               </p>
               {adminItems.map((item) => {
                 const isActive = pathname.startsWith(item.href)
-                return (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className={`flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-                      isActive ? 'bg-white text-zinc-950' : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                    }`}
-                  >
-                    <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </a>
-                )
+                return renderNavLink(item, isActive)
               })}
             </>
           )}
         </nav>
 
-        <div className="border-t border-zinc-700 pt-4">
-          <a
-            href="/dashboard/profile"
-            className={`flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-zinc-800 ${
-              pathname.startsWith('/dashboard/profile') ? 'bg-zinc-800' : ''
-            }`}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold">
-              {user?.full_name?.charAt(0).toUpperCase() ?? '?'}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">{user?.full_name}</p>
-              <p className="truncate text-xs text-zinc-400">{user?.email}</p>
-              <p className="mt-1 truncate text-xs font-semibold text-emerald-400">
-                {user?.roles?.name ?? 'Sin rol'}
-              </p>
-            </div>
-          </a>
-          <button
-            onClick={handleLogout}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-zinc-600 px-2.5 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
-          >
-            <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-4 w-4 shrink-0" />
-            <span>Cerrar sesión</span>
-          </button>
-        </div>
+        {renderProfileFooter()}
       </aside>
 
       {/* Sidebar de escritorio (>=1024px): colapsado a iconos, se expande con hover */}
-      <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-x-hidden overflow-y-auto border-r border-zinc-200 bg-zinc-950 px-3 py-6 text-white transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
-      <div className="mb-10 overflow-hidden whitespace-nowrap">
-        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          Inventario vial
-        </p>
-        <h1 className="mt-2 text-2xl font-bold">
-          <span className="hidden group-hover:inline">SIGSEV</span>
-          <span className="inline group-hover:hidden">SV</span>
-        </h1>
+      <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-x-hidden overflow-y-auto border-r border-zinc-800 bg-zinc-950 px-3 py-6 text-white shadow-2xl shadow-black/30 transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
+      <div className="mb-10 overflow-hidden">
+        {renderLogo(true)}
       </div>
 
       <nav className="flex-1 space-y-1 overflow-x-hidden">
@@ -216,81 +228,22 @@ export default function Sidebar() {
             item.href === '/dashboard'
               ? pathname === '/dashboard'
               : pathname.startsWith(item.href)
-          return (
-            <a
-              key={item.label}
-              href={item.href}
-              title={item.label}
-              className={`flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'bg-white text-zinc-950'
-                  : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-              }`}
-            >
-              <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
-              <span className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                {item.label}
-              </span>
-            </a>
-          )
+          return renderNavLink(item, isActive, true)
         })}
         {user?.roles?.name === 'ADMIN' && (
           <>
-            <p className="mt-4 truncate px-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            <p className="mt-5 mb-1 truncate border-t border-zinc-800/80 px-2.5 pt-4 text-xs font-semibold uppercase tracking-widest text-zinc-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
               Administración
             </p>
             {adminItems.map((item) => {
               const isActive = pathname.startsWith(item.href)
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  title={item.label}
-                  className={`flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-                    isActive
-                      ? 'bg-white text-zinc-950'
-                      : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                  }`}
-                >
-                  <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
-                  <span className="opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                    {item.label}
-                  </span>
-                </a>
-              )
+              return renderNavLink(item, isActive, true)
             })}
           </>
         )}
       </nav>
 
-      <div className="border-t border-zinc-700 pt-4">
-        <a
-          href="/dashboard/profile"
-          title={user?.full_name}
-          className={`flex items-center gap-3 overflow-hidden rounded-md px-2 py-2 transition-colors hover:bg-zinc-800 ${
-            pathname.startsWith('/dashboard/profile') ? 'bg-zinc-800' : ''
-          }`}
-        >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold">
-            {user?.full_name?.charAt(0).toUpperCase() ?? '?'}
-          </div>
-          <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-            <p className="truncate text-sm font-medium text-white">{user?.full_name}</p>
-            <p className="truncate text-xs text-zinc-400">{user?.email}</p>
-            <p className="mt-1 truncate text-xs font-semibold text-emerald-400">
-              {user?.roles?.name ?? 'Sin rol'}
-            </p>
-          </div>
-        </a>
-        <button
-          onClick={handleLogout}
-          title="Cerrar sesión"
-          className="mt-3 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md border border-zinc-600 px-2.5 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white"
-        >
-          <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-4 w-4 shrink-0" />
-          <span className="hidden group-hover:inline">Cerrar sesión</span>
-        </button>
-      </div>
+      {renderProfileFooter(true)}
     </aside>
     </>
   )

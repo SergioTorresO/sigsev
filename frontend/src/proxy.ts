@@ -5,7 +5,7 @@ const PROTECTED_PREFIXES = ['/dashboard']
 // Routes only accessible when NOT logged in
 const AUTH_ROUTES = ['/login', '/register']
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   const token = req.cookies.get('token')?.value
 

@@ -5,3 +5,9 @@ node_modules
 dist
 .next
 coverage
+
+# Autogenerados por `next dev` en cada arranque (frontend/CLAUDE.md
+# solo apunta a AGENTS.md) — no confundir con el CLAUDE.md de la raíz,
+# que sí es documentación real del proyecto.
+frontend/AGENTS.md
+frontend/CLAUDE.md

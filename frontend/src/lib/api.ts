@@ -43,7 +43,16 @@ export async function apiFetch<T = unknown>(
     ...rest,
   })
 
-  const data = await res.json()
+  // Si el body no es JSON (p.ej. un 429/502 de un proxy intermedio que
+  // responde texto plano), no revienta con "Unexpected token" — se
+  // envuelve en un objeto con el texto crudo como mensaje.
+  const rawText = await res.text()
+  let data: unknown
+  try {
+    data = rawText ? JSON.parse(rawText) : {}
+  } catch {
+    data = { message: rawText || `Error ${res.status}` }
+  }
 
   if (!res.ok) {
     // Si la llamada llevaba un token y el backend la rechazó con 401, la sesión
@@ -57,7 +66,11 @@ export async function apiFetch<T = unknown>(
         window.location.href = '/login?expired=1'
       }
     }
-    throw new ApiError(data.message ?? `Error ${res.status}`, data)
+    const message =
+      typeof data === 'object' && data !== null && 'message' in data && typeof data.message === 'string'
+        ? data.message
+        : `Error ${res.status}`
+    throw new ApiError(message, data)
   }
 
   return data as T

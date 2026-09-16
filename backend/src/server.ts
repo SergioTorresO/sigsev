@@ -83,6 +83,10 @@ app.use(rateLimit({
   limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  // Objeto en vez de string: Express serializa un objeto pasado a res.send()
+  // como JSON automáticamente, así el frontend (que siempre hace res.json())
+  // no falla al parsear un 429.
+  message: { message: 'Demasiadas solicitudes. Intenta de nuevo en unos minutos.' },
 }))
 
 app.use('/api/auth', authRoutes)

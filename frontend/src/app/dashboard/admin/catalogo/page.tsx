@@ -77,7 +77,7 @@ export default function CatalogoPage() {
   const fetchCategories = useCallback(async () => {
     setCatLoading(true)
     try {
-      const data = await api.get<Category[]>('/catalog/categories')
+      const data = await api.get<Category[]>('/api/catalog/categories')
       setCategories(data)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Error al cargar categorías')
@@ -96,7 +96,7 @@ export default function CatalogoPage() {
       })
       if (stSearch) params.set('search', stSearch)
       if (stCategoryFilter) params.set('category_id', stCategoryFilter)
-      const data = await api.get<SignalTypesResponse>(`/catalog/signal-types?${params}`)
+      const data = await api.get<SignalTypesResponse>(`/api/catalog/signal-types?${params}`)
       setSignalTypes(data.data)
       setStTotal(data.total)
     } catch (e) {
@@ -130,10 +130,10 @@ export default function CatalogoPage() {
     setCatSubmitting(true)
     try {
       if (editCat) {
-        await api.put(`/catalog/categories/${editCat.id}`, catForm)
+        await api.put(`/api/catalog/categories/${editCat.id}`, catForm)
         toast.success('Categoría actualizada')
       } else {
-        await api.post('/catalog/categories', catForm)
+        await api.post('/api/catalog/categories', catForm)
         toast.success('Categoría creada')
       }
       setShowCatForm(false)
@@ -148,7 +148,7 @@ export default function CatalogoPage() {
   const confirmDeleteCat = async () => {
     if (!deleteCatId) return
     try {
-      await api.delete(`/catalog/categories/${deleteCatId}`)
+      await api.delete(`/api/catalog/categories/${deleteCatId}`)
       toast.success('Categoría eliminada')
       setDeleteCatId(null)
       fetchCategories()
@@ -181,10 +181,10 @@ export default function CatalogoPage() {
     setStSubmitting(true)
     try {
       if (editSt) {
-        await api.put(`/catalog/signal-types/${editSt.id}`, stForm)
+        await api.put(`/api/catalog/signal-types/${editSt.id}`, stForm)
         toast.success('Tipo de señal actualizado')
       } else {
-        await api.post('/catalog/signal-types', stForm)
+        await api.post('/api/catalog/signal-types', stForm)
         toast.success('Tipo de señal creado')
       }
       setShowStForm(false)
@@ -199,7 +199,7 @@ export default function CatalogoPage() {
   const confirmDeleteSt = async () => {
     if (!deleteStId) return
     try {
-      await api.delete(`/catalog/signal-types/${deleteStId}`)
+      await api.delete(`/api/catalog/signal-types/${deleteStId}`)
       toast.success('Tipo de señal eliminado')
       setDeleteStId(null)
       fetchSignalTypes()

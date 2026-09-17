@@ -48,12 +48,23 @@ export const updateCategory = async (id: string, payload: z.infer<typeof categor
 
 export const deleteCategory = async (id: string) => {
   // Verificar que no tenga tipos asociados
-  const { count } = await supabase
+  const { count: typesCount } = await supabase
     .from('signal_types')
     .select('id', { count: 'exact', head: true })
     .eq('category_id', id)
-  if ((count ?? 0) > 0)
+  if ((typesCount ?? 0) > 0)
     throw new Error('No se puede eliminar: hay tipos de señal asociados a esta categoría')
+
+  // Una señal puede tener categoría sin un tipo específico (ver
+  // signals/new: category_id se guarda aunque signal_type_id quede vacío),
+  // así que también hay que verificar esa FK directa — si no, el error
+  // crudo de Postgres se filtra sin traducir hasta el cliente.
+  const { count: signalsCount } = await supabase
+    .from('signals')
+    .select('id', { count: 'exact', head: true })
+    .eq('category_id', id)
+  if ((signalsCount ?? 0) > 0)
+    throw new Error('No se puede eliminar: hay señales asociadas a esta categoría')
 
   const { error } = await supabase.from('signal_categories').delete().eq('id', id)
   if (error) throw new Error(error.message)

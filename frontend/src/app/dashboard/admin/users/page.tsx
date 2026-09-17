@@ -67,6 +67,28 @@ export default function AdminUsersPage() {
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  // Eliminar un usuario es hard delete: sus inspecciones/mantenimientos
+  // asignados no se borran, pero quedan con technician_id/assigned_to en
+  // null (se pierde esa atribución). Se avisa antes de confirmar.
+  const [deleteImpact, setDeleteImpact] = useState<{ inspections: number; maintenances: number } | null>(null)
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false)
+
+  const openDelete = async (id: string) => {
+    setDeleteId(id)
+    setDeleteImpact(null)
+    setDeleteImpactLoading(true)
+    try {
+      const [insp, maint] = await Promise.all([
+        api.get<{ total: number }>(`/api/inspections?technician_id=${id}&limit=1`),
+        api.get<{ total: number }>(`/api/maintenances?assigned_to=${id}&limit=1`),
+      ])
+      setDeleteImpact({ inspections: insp.total, maintenances: maint.total })
+    } catch {
+      setDeleteImpact(null)
+    } finally {
+      setDeleteImpactLoading(false)
+    }
+  }
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -167,6 +189,7 @@ export default function AdminUsersPage() {
     try {
       await api.delete(`/api/users/${deleteId}`)
       setDeleteId(null)
+      setDeleteImpact(null)
       fetchUsers()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al eliminar usuario')
@@ -329,7 +352,7 @@ export default function AdminUsersPage() {
                         Editar
                       </button>
                       <button
-                        onClick={() => setDeleteId(u.id)}
+                        onClick={() => openDelete(u.id)}
                         className="rounded-md border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
                       >
                         Eliminar
@@ -408,19 +431,29 @@ export default function AdminUsersPage() {
       {/* Delete confirmation */}
       <Modal
         isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        onClose={() => { setDeleteId(null); setDeleteImpact(null) }}
         titleId="delete-user-title"
         title="Eliminar usuario"
         maxWidthClassName="max-w-sm"
         showCloseButton={false}
       >
-        <p className="mb-5 text-sm text-zinc-600">Esta acción es permanente. ¿Deseas continuar?</p>
+        <p className="mb-2 text-sm text-zinc-600">Esta acción es permanente. ¿Deseas continuar?</p>
+        {deleteImpactLoading ? (
+          <p className="mb-5 text-sm text-zinc-400">Verificando trabajo asignado…</p>
+        ) : deleteImpact && (deleteImpact.inspections > 0 || deleteImpact.maintenances > 0) ? (
+          <p className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Este usuario tiene {deleteImpact.inspections} inspección(es) y {deleteImpact.maintenances} mantenimiento(s) asignados.
+            Esos registros no se borran, pero quedarán sin técnico asignado: se perderá quién realizó ese trabajo.
+          </p>
+        ) : (
+          <div className="mb-5" />
+        )}
         <div className="flex gap-3">
           <button onClick={handleDelete} disabled={deleteLoading}
             className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">
             {deleteLoading ? 'Eliminando…' : 'Eliminar'}
           </button>
-          <button onClick={() => setDeleteId(null)}
+          <button onClick={() => { setDeleteId(null); setDeleteImpact(null) }}
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50">
             Cancelar
           </button>

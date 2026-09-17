@@ -75,9 +75,13 @@ export default function Sidebar() {
     TECNICO: ['/dashboard', '/dashboard/mapa', '/dashboard/signals', '/dashboard/mis-asignaciones'],
   }
   const allowedHrefs = user?.roles?.name ? ALLOWED_HREFS_BY_ROLE[user.roles.name] : undefined
-  const visibleNavItems = allowedHrefs
+  // "Mis asignaciones" es exclusivo de TECNICO: ADMIN/SUPERVISOR no están en
+  // ALLOWED_HREFS_BY_ROLE (ven todos los demás módulos sin filtrar), así que
+  // se excluye aparte para no colarse en su sidebar.
+  const visibleNavItems = (allowedHrefs
     ? navItems.filter((item) => allowedHrefs.includes(item.href))
     : navItems
+  ).filter((item) => item.href !== '/dashboard/mis-asignaciones' || user?.roles?.name === 'TECNICO')
 
   // Marca/logo: badge emerald con "S" + wordmark, reutilizado en drawer y sidebar de escritorio
   // (función simple, no componente, para no remontar estos nodos en cada re-render de Sidebar)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -66,7 +67,13 @@ type CompleteTarget =
 
 export default function MisAsignacionesPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const toast = useToast()
+
+  // Exclusivo de TECNICO (ver decisión de permisos en CLAUDE.md)
+  useEffect(() => {
+    if (user && user.roles?.name !== 'TECNICO') router.replace('/dashboard')
+  }, [user, router])
 
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [maintenances, setMaintenances] = useState<Maintenance[]>([])

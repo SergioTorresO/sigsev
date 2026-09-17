@@ -5,7 +5,11 @@ services:
     plan: free
     region: oregon
     rootDir: .
-    buildCommand: corepack enable && corepack prepare pnpm@10.32.1 --activate && pnpm install --frozen-lockfile && pnpm --filter sigsev-backend build
+    # `corepack enable` falla en la imagen de build de Render (Node 24.x) con
+    # "EROFS: read-only file system, unlink '/usr/bin/pnpm'" — esa ruta ya
+    # trae un pnpm preinstalado en solo lectura que corepack no puede
+    # reemplazar. Se instala pnpm vía npm global en su lugar, que no toca esa ruta.
+    buildCommand: npm install -g pnpm@10.32.1 && pnpm install --frozen-lockfile && pnpm --filter sigsev-backend build
     startCommand: pnpm --filter sigsev-backend start
     healthCheckPath: /health
     envVars:

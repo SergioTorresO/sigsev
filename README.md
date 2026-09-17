@@ -84,7 +84,7 @@ pnpm dev   # levanta backend y frontend juntos (concurrently)
 |---|---|
 | **ADMIN** | Acceso total: todos los módulos, gestión de usuarios y auditoría. |
 | **SUPERVISOR** | Todos los módulos excepto Administración (usuarios y auditoría). Gestiona señales, zonas, inspecciones y mantenimientos, y puede asignarlos a técnicos. |
-| **TECNICO** | Dashboard, Mapa GIS y Señales (solo lectura). |
+| **TECNICO** | Dashboard, Mapa GIS, Señales (puede registrar y editar señales en campo, pero no desactivarlas/eliminarlas) y Mis asignaciones (completa las inspecciones/mantenimientos que le asignen). |
 | **CONSULTA** | Dashboard y Mapa GIS únicamente. Rol por defecto al crear un usuario sin especificar rol. |
 
 El primer usuario ADMIN se crea registrándose normalmente y actualizando su rol a `ADMIN` directamente en la tabla `users` de Supabase (no hay un usuario admin precargado).

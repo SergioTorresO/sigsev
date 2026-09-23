@@ -180,7 +180,7 @@ export default function Sidebar() {
 
       {/* Drawer móvil/tablet: mismas opciones que el sidebar de escritorio, siempre expandido */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-950 px-5 py-6 text-white shadow-2xl transition-transform duration-200 ease-in-out lg:hidden ${
+        className={`sidebar-scroll fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-950 px-5 py-6 text-white shadow-2xl transition-transform duration-200 ease-in-out lg:hidden ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -221,7 +221,7 @@ export default function Sidebar() {
       </aside>
 
       {/* Sidebar de escritorio (>=1024px): colapsado a iconos, se expande con hover */}
-      <aside className="group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-x-hidden overflow-y-auto border-r border-zinc-800 bg-zinc-950 px-3 py-6 text-white shadow-2xl shadow-black/30 transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
+      <aside className="sidebar-scroll group fixed inset-y-0 left-0 z-40 hidden w-20 flex-col overflow-x-hidden overflow-y-auto border-r border-zinc-800 bg-zinc-950 px-3 py-6 text-white shadow-2xl shadow-black/30 transition-all duration-200 ease-in-out hover:w-64 hover:px-5 lg:flex">
       <div className="mb-10 overflow-hidden">
         {renderLogo(true)}
       </div>

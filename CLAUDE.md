@@ -17,6 +17,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a s
 - **Email**: Resend (`resend`) — recuperación de contraseña y notificaciones por correo; sin `RESEND_API_KEY` configurada, el flujo sigue funcionando en modo degradado (ver decisión 30)
 - **Logging**: `pino` + `pino-http` (request-id por request, ver decisión 24 de `PRODUCTION_CHECKLIST.md`)
 - **Despliegue**: backend en Render (Blueprint `render.yaml`), frontend en Vercel; CI en GitHub Actions (`.github/workflows/ci.yml`) — ver sección "Despliegue y CI" al final
+- **Iconos**: `@tabler/icons-react` (nav del Sidebar y accesos sueltos como logout/menú móvil); marca en azul cívico (`blue-*` de Tailwind, sin extender `tailwind.config.ts`), estados de señal/éxito se quedan en verde/ámbar/rosa a propósito (ver decisión 33)
 
 ## Estructura de carpetas
 ```
@@ -80,7 +81,8 @@ sigsev-project/
     │   │   ├── reset-password/page.tsx     # Define nueva contraseña con el token de la URL (POST /api/auth/reset-password)
     │   │   └── layout.tsx             # Wraps con <Providers>
     │   ├── components/
-    │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales+Mis asignaciones; ADMIN/SUPERVISOR: todo incl. Zonas); "Administración" (Catálogo, Usuarios, Auditoría) solo ADMIN
+    │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales+Mis asignaciones; ADMIN/SUPERVISOR: todo incl. Zonas); "Administración" (Catálogo, Usuarios, Auditoría) solo ADMIN; iconos de `@tabler/icons-react`, logo real vía <Logo />
+    │   │   ├── Logo.tsx               # Marca de SIGSEV: SVG inline (triángulo + carretera en S + punto), degradado blue-400→blue-600 (ver decisión 33)
     │   │   ├── DashboardLayout.tsx    # Wrapper de header/main que renderiza <Sidebar />
     │   │   ├── MapView.tsx            # Componente Leaflet (no SSR)
     │   │   ├── NotificationBell.tsx   # Campanita de notificaciones (mantenimientos vencidos, señales en mal estado)
@@ -228,6 +230,7 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 30. **Recuperación de contraseña (`forgot-password`/`reset-password`) nunca revela si un correo existe ni expone el token fuera de producción sin email configurado**: `requestPasswordReset` siempre responde el mismo mensaje genérico exista o no el usuario (evita enumeración). El token se genera con `crypto.randomBytes(32)`, se guarda **hasheado** (`sha256`) en `users.reset_token` con `reset_token_expires` a 1h, y solo el valor sin hashear viaja en el link del correo. Si `RESEND_API_KEY` no está configurada, el backend **nunca** devuelve el link en la respuesta HTTP (permitiría tomar cualquier cuenta, incluida un ADMIN, solo con su correo) — en `NODE_ENV !== 'production'` lo imprime en el log del servidor para poder probar el flujo local sin enviar correo real; en producción sin email configurado simplemente no hay flujo funcional hasta configurarlo (ver "Próximos pasos"). El link usa el header `Origin` del request (`req.headers.origin`) en vez de solo `FRONTEND_URL`, para que funcione igual en localhost, devtunnels o producción sin tocar `.env` por entorno.
 31. **`frontend/src/middleware.ts` → `proxy.ts`**: renombrado siguiendo la convención de Next.js 16 (codemod oficial `@next/codemod`), misma lógica de protección de `/dashboard/*` vía cookie `token`, solo cambia el nombre del archivo y el export (`proxy` en vez de `middleware`).
 32. **Backend en Render vía Blueprint (`render.yaml`)**: la imagen de build de Render (Node 24.x) ya trae `pnpm` preinstalado en una ruta de solo lectura — tanto `corepack enable` como `npm install -g pnpm` fallan con `EROFS`. No hace falta instalarlo: el corepack pre-activado de la imagen ya respeta `"packageManager": "pnpm@10.32.1"` del `package.json` raíz, así que `buildCommand`/`startCommand` solo usan `pnpm` directamente. El frontend se despliega aparte en Vercel (detecta Next.js automáticamente, sin config adicional en el repo).
+33. **Rebrand esmeralda → azul cívico + Tabler Icons + logo real (2026-09-24)**: el diseño original se documentó como un Design System de Claude construido a partir del código real, con una propuesta explícita de cambio en su propio README (marca a `blue`, iconos a `@tabler/icons-react`, logo real en vez de la "S" placeholder). Se aplicó ese cambio en frontend, con una regla clara: **solo la "marca" cambia de color** (botones primarios, focus de inputs, pill activo del sidebar, eyebrow/subtítulos, links de acción, tabs activos, spinners, logo) — todo lo que significa *estado/éxito* se queda en verde a propósito: badges `BUENO`/`COMPLETADO`, mensajes de éxito inline, el toggle `is_active`, el badge `CREATE` de auditoría y el badge `ASSIGNMENT` de notificaciones. El toast informativo (`ToastContext.tsx`) se movió de `blue` a `sky` porque `blue` ya es la marca. `components/Logo.tsx` es un SVG inline nuevo (sin `public/`, sin `next/image`) con el degradado `blue-400→blue-600`; el círculo de avatar del usuario (inicial del nombre) es un elemento aparte, solo se le recoloreó el degradado, no lleva el logo. Verificado en navegador (login + sidebar de escritorio, `pnpm build` limpio, sin errores de consola) contra la cuenta de prueba `sigsev.qa.test@example.com`.
 
 ## Lo que está implementado (completo)
 - [x] Autenticación JWT (login/register/logout)
@@ -257,6 +260,7 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 - [x] Helpers compartidos de carga masiva (`backend/src/lib/bulkImport.ts`) usados por `signals` y `zones` en vez de lógica duplicada (ver decisión 18)
 - [x] Recuperación de contraseña (`/forgot-password`, `/reset-password`): token de un solo uso hasheado con expiración de 1h, envío por email vía Resend, sin enumeración de usuarios ni exposición del token en producción (ver decisión 30)
 - [x] Build/start de producción del backend (`tsc` + `node dist/...`) y despliegue: backend en Render (`render.yaml`, Blueprint), frontend en Vercel, CI en GitHub Actions (typecheck + test + build) — ver "Despliegue y CI"
+- [x] Rebrand de marca a azul cívico + iconos `@tabler/icons-react` + logo real (`<Logo />`) en el Sidebar, preservando los colores de estado/éxito en verde (ver decisión 33)
 
 ## Próximos pasos sugeridos
 - [ ] **Verificación de dominio personalizado** para el envío de correos de notificación en producción (Resend) — pendiente de retomar

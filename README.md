@@ -27,6 +27,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a l
 | Gráficas | Recharts |
 | Validación | Zod |
 | Email | Resend (recuperación de contraseña y notificaciones) |
+| Iconos | Tabler Icons (`@tabler/icons-react`) |
 
 ## Requisitos previos
 

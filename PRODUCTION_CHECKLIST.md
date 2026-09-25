@@ -36,5 +36,11 @@ Basado en la auditoría completa del proyecto (backend, frontend, base de datos)
 - [x] Eliminar los índices nunca usados detectados por Supabase o confirmar que se usarán pronto — se confirma su uso futuro en vez de eliminarlos (ver CLAUDE.md, decisión 19): 11 son soporte de FK recién agregadas (esperan más volumen de datos/joins), `idx_notifications_is_read` soporta un filtro ya activo en el código, e `idx_signals_geom` soporta `signals.geom` (mantenida por trigger) preparada para una futura búsqueda espacial.
 - [x] Mover la extensión `postgis` fuera del esquema `public` (advisory de Supabase, bajo impacto real) — intentado y descartado: Postgres rechaza `ALTER EXTENSION postgis SET SCHEMA` (`0A000: extension "postgis" does not support SET SCHEMA`), y una migración real (drop/recrear) pondría en riesgo la columna `signals.geom` y su trigger sin beneficio funcional. Documentado como excepción aceptada (CLAUDE.md, decisión 20), igual que `spatial_ref_sys`.
 
+## Post-auditoría (después del 2026-06-23)
+
+- [x] Build/start de producción del backend ya definidos (`tsc` + `node dist/...`, ver sección Alto) y **desplegados de verdad**: backend en Render como Blueprint (`render.yaml`), frontend en Vercel — ver CLAUDE.md, decisión 32.
+- [x] CI en GitHub Actions (`.github/workflows/ci.yml`): typecheck + test + build del backend, build del frontend, en cada push/PR a `main` — no reemplaza el `npm test` local pendiente de confirmar (ítem de la sección Alto), pero ya corre en cada cambio.
+- [x] Flujo de recuperación de contraseña (`/forgot-password`, `/reset-password`) con token de un solo uso hasheado (expira en 1h), sin enumeración de usuarios y sin exponer el token en producción si Resend no está configurado — ver CLAUDE.md, decisión 30.
+
 ---
 *Generado a partir de la auditoría de producción/UX del 2026-06-23. Ver CLAUDE.md para contexto de arquitectura.*

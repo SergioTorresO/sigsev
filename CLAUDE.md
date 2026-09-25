@@ -14,6 +14,9 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a s
 - **Gráficas**: Recharts (dashboard)
 - **Reportes**: exportación a Excel/PDF (`xlsx`, generación de PDF en backend)
 - **Carga masiva**: `multer` + `xlsx` (CSV/Excel) en `signals/bulk-import` y `zones/bulk-import`
+- **Email**: Resend (`resend`) — recuperación de contraseña y notificaciones por correo; sin `RESEND_API_KEY` configurada, el flujo sigue funcionando en modo degradado (ver decisión 30)
+- **Logging**: `pino` + `pino-http` (request-id por request, ver decisión 24 de `PRODUCTION_CHECKLIST.md`)
+- **Despliegue**: backend en Render (Blueprint `render.yaml`), frontend en Vercel; CI en GitHub Actions (`.github/workflows/ci.yml`) — ver sección "Despliegue y CI" al final
 
 ## Estructura de carpetas
 ```
@@ -22,12 +25,18 @@ sigsev-project/
 │   ├── src/
 │   │   ├── lib/
 │   │   │   ├── supabase.ts          # Cliente Supabase con service role key
-│   │   │   └── audit.ts             # logAudit(): inserta en audit_logs sin romper la operación principal si falla
+│   │   │   ├── audit.ts             # logAudit(): inserta en audit_logs sin romper la operación principal si falla
+│   │   │   ├── email.ts             # Resend: sendPasswordResetEmail / sendNotificationEmail, no-op si falta RESEND_API_KEY
+│   │   │   ├── logger.ts            # pino, usado por pino-http en server.ts
+│   │   │   ├── bulkImport.ts        # helpers compartidos de carga masiva (signals/zones)
+│   │   │   ├── assignment.ts        # assertAssigneeRole: valida rol permitido como asignado
+│   │   │   ├── imageUpload.ts       # multer en memoria (jpg/png/webp, máx. 5MB) para evidencias
+│   │   │   └── storage.ts           # uploadEvidenceImage: sube a Supabase Storage (bucket evidences)
 │   │   ├── middlewares/
 │   │   │   ├── auth.middleware.ts   # verifyToken + declare global req.user
 │   │   │   └── requireRole.middleware.ts  # requireRole('ADMIN', ...), cachea req.user.roleName
 │   │   ├── modules/
-│   │   │   ├── auth/                # login, register
+│   │   │   ├── auth/                # login, register, recuperación de contraseña (forgot/reset-password)
 │   │   │   ├── signals/             # CRUD señales (soft delete is_active) + carga masiva CSV/Excel
 │   │   │   ├── inspections/         # CRUD inspecciones + actualiza status señal
 │   │   │   ├── maintenances/        # CRUD mantenimientos + completed_at + job de vencidos
@@ -66,6 +75,9 @@ sigsev-project/
     │   │   │       ├── audit/page.tsx      # Página exclusiva de ADMIN: registro de auditoría con filtros y detalle antes/después
     │   │   │       └── catalogo/page.tsx   # Página exclusiva de ADMIN: pestañas Categorías / Tipos de señal, CRUD completo
     │   │   ├── login/page.tsx
+    │   │   ├── register/page.tsx
+    │   │   ├── forgot-password/page.tsx    # Solicita el enlace de recuperación (POST /api/auth/forgot-password)
+    │   │   ├── reset-password/page.tsx     # Define nueva contraseña con el token de la URL (POST /api/auth/reset-password)
     │   │   └── layout.tsx             # Wraps con <Providers>
     │   ├── components/
     │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales+Mis asignaciones; ADMIN/SUPERVISOR: todo incl. Zonas); "Administración" (Catálogo, Usuarios, Auditoría) solo ADMIN
@@ -79,8 +91,8 @@ sigsev-project/
     │   ├── context/
     │   │   └── AuthContext.tsx        # user (incluye user.roles.name), token, login, logout
     │   ├── lib/
-    │   │   └── api.ts                 # Helpers api.get/post/put/delete/patch con Bearer token
-    │   └── middleware.ts              # Protege /dashboard/*, redirige si no hay cookie 'token'
+    │   │   └── api.ts                 # Helpers api.get/post/put/delete/patch con Bearer token; apiFetch parsea el body de forma defensiva (ver decisión 24)
+    │   └── proxy.ts                   # (antes middleware.ts, renombrado por convención de Next.js 16) Protege /dashboard/*, redirige si no hay cookie 'token'
     ├── .env.local
     └── tsconfig.json                  # paths: { "@/*": ["./src/*"] }
 ```
@@ -94,6 +106,8 @@ SUPABASE_SERVICE_ROLE_KEY="<valor real solo en backend/.env local — NUNCA comm
 JWT_SECRET="<valor real solo en backend/.env local — NUNCA commitear>"
 FRONTEND_URL="http://localhost:3000"
 PORT=4000
+RESEND_API_KEY="<opcional — sin ella, forgot-password sigue funcionando en modo dev (link por consola) y las notificaciones por email simplemente no se envían>"
+RESEND_FROM="SIGSEV <onboarding@resend.dev>"
 ```
 
 ### frontend/.env.local
@@ -105,7 +119,9 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
 | POST | /api/auth/login | ❌ | Login |
-| POST | /api/auth/register | ❌ | Registro |
+| POST | /api/auth/register | ❌ | Registro (siempre asigna rol CONSULTA, `role_id` del cliente se ignora) |
+| POST | /api/auth/forgot-password | ❌ (rate-limited) | Genera un token de recuperación (hash SHA-256 en `users.reset_token`, expira en 1h) y envía el link por email vía Resend; sin `RESEND_API_KEY` y fuera de producción, el link se imprime en el log del servidor. Nunca revela si el correo existe |
+| POST | /api/auth/reset-password | ❌ (rate-limited) | Define nueva contraseña con `token` + `password`; invalida el token al usarlo |
 | GET | /api/signals | ✅ cualquier rol | Listar señales |
 | GET | /api/signals/:id | ✅ cualquier rol | Ver señal |
 | POST/PUT | /api/signals(/:id) | ✅ ADMIN, SUPERVISOR, TECNICO | Crear / editar señal (registro en campo); desactivar sigue exclusivo de ADMIN/SUPERVISOR vía toggle-active |
@@ -209,6 +225,9 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 27. **`deleteCategory` también valida señales que referencian la categoría directamente**: una señal puede tener `category_id` sin `signal_type_id` (el formulario de crear señal lo permite). El guard de integridad original solo contaba `signal_types` asociados; si una categoría estaba en uso solo por una señal directa, el `DELETE` fallaba con el error crudo de Postgres (`violates foreign key constraint "signals_category_id_fkey"`) en vez de un mensaje traducido. Ahora se valida también contra `signals.category_id` antes de intentar el delete.
 28. **"Mis asignaciones" es exclusivo de TECNICO, reforzado en dos capas**: `Sidebar.tsx` antes solo filtraba la navegación para CONSULTA y TECNICO vía `ALLOWED_HREFS_BY_ROLE`; como ADMIN/SUPERVISOR no estaban en ese mapa, caían al array `navItems` sin filtrar (que sí incluye "Mis asignaciones"), así que el link aparecía en su sidebar. Además `mis-asignaciones/page.tsx` no tenía ningún guard de rol (a diferencia de todas las demás páginas protegidas), por lo que un ADMIN/SUPERVISOR podía entrar por URL directa. Se corrigió excluyendo el href del array sin filtrar salvo que el rol sea TECNICO, y agregando el mismo patrón `useEffect` de redirect a `/dashboard` que usan las demás páginas restringidas.
 29. **Confirmación de borrado de usuario muestra el impacto antes de eliminar**: un hard-delete de usuario (decisión 4) pone `technician_id`/`assigned_to` en `NULL` (ON DELETE SET NULL) en cualquier inspección/mantenimiento que tuviera asignado, perdiendo esa atribución sin aviso — el historial de "quién hizo qué" desaparecía en silencio (aunque el snapshot previo del usuario sigue en `audit_logs` vía `logAudit`, no es algo que un ADMIN vaya a buscar ahí de forma natural). El modal de confirmación en `/dashboard/admin/users` ahora consulta `GET /api/inspections?technician_id=<id>&limit=1` y `GET /api/maintenances?assigned_to=<id>&limit=1` al abrir, y si hay resultados muestra cuántos registros quedarán sin técnico asignado antes de que el ADMIN confirme.
+30. **Recuperación de contraseña (`forgot-password`/`reset-password`) nunca revela si un correo existe ni expone el token fuera de producción sin email configurado**: `requestPasswordReset` siempre responde el mismo mensaje genérico exista o no el usuario (evita enumeración). El token se genera con `crypto.randomBytes(32)`, se guarda **hasheado** (`sha256`) en `users.reset_token` con `reset_token_expires` a 1h, y solo el valor sin hashear viaja en el link del correo. Si `RESEND_API_KEY` no está configurada, el backend **nunca** devuelve el link en la respuesta HTTP (permitiría tomar cualquier cuenta, incluida un ADMIN, solo con su correo) — en `NODE_ENV !== 'production'` lo imprime en el log del servidor para poder probar el flujo local sin enviar correo real; en producción sin email configurado simplemente no hay flujo funcional hasta configurarlo (ver "Próximos pasos"). El link usa el header `Origin` del request (`req.headers.origin`) en vez de solo `FRONTEND_URL`, para que funcione igual en localhost, devtunnels o producción sin tocar `.env` por entorno.
+31. **`frontend/src/middleware.ts` → `proxy.ts`**: renombrado siguiendo la convención de Next.js 16 (codemod oficial `@next/codemod`), misma lógica de protección de `/dashboard/*` vía cookie `token`, solo cambia el nombre del archivo y el export (`proxy` en vez de `middleware`).
+32. **Backend en Render vía Blueprint (`render.yaml`)**: la imagen de build de Render (Node 24.x) ya trae `pnpm` preinstalado en una ruta de solo lectura — tanto `corepack enable` como `npm install -g pnpm` fallan con `EROFS`. No hace falta instalarlo: el corepack pre-activado de la imagen ya respeta `"packageManager": "pnpm@10.32.1"` del `package.json` raíz, así que `buildCommand`/`startCommand` solo usan `pnpm` directamente. El frontend se despliega aparte en Vercel (detecta Next.js automáticamente, sin config adicional en el repo).
 
 ## Lo que está implementado (completo)
 - [x] Autenticación JWT (login/register/logout)
@@ -236,6 +255,8 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 - [x] Componentes reutilizables `<Modal>` y `<Pagination>` (ver decisión 21), adoptados en señales, zonas, inspecciones, mantenimientos, mis-asignaciones, admin/users, admin/audit y admin/catalogo
 - [x] Accesibilidad básica en modales/formularios: `useModalA11y` (focus trap, cierre con Escape, ARIA `role="dialog"`/`aria-modal`/`aria-labelledby`) encapsulado dentro de `<Modal>`; `<label htmlFor>` enlazado con sus inputs en los formularios restantes
 - [x] Helpers compartidos de carga masiva (`backend/src/lib/bulkImport.ts`) usados por `signals` y `zones` en vez de lógica duplicada (ver decisión 18)
+- [x] Recuperación de contraseña (`/forgot-password`, `/reset-password`): token de un solo uso hasheado con expiración de 1h, envío por email vía Resend, sin enumeración de usuarios ni exposición del token en producción (ver decisión 30)
+- [x] Build/start de producción del backend (`tsc` + `node dist/...`) y despliegue: backend en Render (`render.yaml`, Blueprint), frontend en Vercel, CI en GitHub Actions (typecheck + test + build) — ver "Despliegue y CI"
 
 ## Próximos pasos sugeridos
 - [ ] **Verificación de dominio personalizado** para el envío de correos de notificación en producción (Resend) — pendiente de retomar
@@ -254,3 +275,14 @@ pnpm --filter sigsev-frontend dev   # Next.js en puerto 3000
 # O ambos a la vez desde la raíz
 pnpm dev
 ```
+
+Backend en modo producción (compilado, sin `ts-node-dev`):
+```bash
+pnpm --filter sigsev-backend build   # tsc -> backend/dist
+pnpm --filter sigsev-backend start   # node dist/src/server.js
+```
+
+## Despliegue y CI
+- **Backend → Render**: Blueprint en `render.yaml` (raíz del repo), servicio web Node, `buildCommand: pnpm install --frozen-lockfile && pnpm --filter sigsev-backend build`, `startCommand: pnpm --filter sigsev-backend start`, `healthCheckPath: /health`. Variables de entorno (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `FRONTEND_URL`, `RESEND_API_KEY`, `RESEND_FROM`) se configuran en el dashboard de Render (`sync: false` en el blueprint, no se versionan). Ver decisión 32 sobre por qué no se instala `pnpm` manualmente en el build.
+- **Frontend → Vercel**: sin configuración adicional en el repo, Vercel detecta Next.js automáticamente. Variable de entorno `NEXT_PUBLIC_API_URL` apuntando a la URL pública del backend en Render.
+- **CI → GitHub Actions** (`.github/workflows/ci.yml`): corre en push/PR a `main`, dos jobs paralelos — `backend` (typecheck + test + build) y `frontend` (build). No despliega nada, solo valida que el código compile y pase tests antes de mergear; el deploy real lo disparan Render/Vercel por su cuenta al pushear a `main`.

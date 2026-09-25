@@ -4,6 +4,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a l
 
 ## Características
 
+- **Autenticación**: login/registro con JWT y recuperación de contraseña por correo (Resend), con enlace de un solo uso que expira en 1 hora.
 - **Inventario de señales**: catálogo georreferenciado con categoría, tipo, estado y municipio/zona, incluyendo carga masiva desde CSV/Excel.
 - **Mapa GIS interactivo** (Leaflet): señales geolocalizadas con filtros por estado, búsqueda y ubicación (departamento → municipio → zona).
 - **Gestión de zonas**: comunas, barrios y corregimientos por municipio.
@@ -25,6 +26,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a l
 | Mapas | Leaflet + react-leaflet |
 | Gráficas | Recharts |
 | Validación | Zod |
+| Email | Resend (recuperación de contraseña y notificaciones) |
 
 ## Requisitos previos
 
@@ -54,6 +56,10 @@ SUPABASE_SERVICE_ROLE_KEY="<tu-service-role-key>"
 JWT_SECRET="<una-clave-secreta-larga-y-aleatoria>"
 FRONTEND_URL="http://localhost:3000"
 PORT=4000
+# Opcionales: sin ellas, "olvidé mi contraseña" sigue funcionando en modo desarrollo
+# (el enlace se imprime en la consola del servidor en vez de enviarse por correo)
+RESEND_API_KEY="<tu-api-key-de-resend>"
+RESEND_FROM="SIGSEV <onboarding@resend.dev>"
 ```
 
 ```bash
@@ -88,6 +94,12 @@ pnpm dev   # levanta backend y frontend juntos (concurrently)
 | **CONSULTA** | Dashboard y Mapa GIS únicamente. Rol por defecto al crear un usuario sin especificar rol. |
 
 El primer usuario ADMIN se crea registrándose normalmente y actualizando su rol a `ADMIN` directamente en la tabla `users` de Supabase (no hay un usuario admin precargado).
+
+## Despliegue
+
+- **Backend**: Render, como Blueprint (`render.yaml` en la raíz) — build con `pnpm`, healthcheck en `/health`.
+- **Frontend**: Vercel (detecta Next.js automáticamente, sin configuración adicional en el repo).
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) corre typecheck + tests + build en cada push/PR a `main`.
 
 ## Notas
 

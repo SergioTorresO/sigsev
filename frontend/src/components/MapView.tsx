@@ -132,7 +132,7 @@ export default function MapView({
           ${signal.signal_types ? `<div style="font-size:12px;color:#555">🔖 ${signal.signal_types.name}${signal.signal_types.code ? ` (${signal.signal_types.code})` : ''}</div>` : ''}
           <div style="margin-top:10px;padding-top:8px;border-top:1px solid #eee">
             <a href="/dashboard/signals/${signal.id}"
-              style="font-size:12px;color:#059669;font-weight:600;text-decoration:none">
+              style="font-size:12px;color:#2563eb;font-weight:600;text-decoration:none">
               Ver detalle →
             </a>
           </div>

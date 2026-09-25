@@ -215,7 +215,7 @@ export default function SignalsPage() {
             )}
             <a
               href="/dashboard/signals/new"
-              className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:px-4"
+              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 sm:px-4"
             >
               + Nueva señal
             </a>
@@ -229,13 +229,13 @@ export default function SignalsPage() {
           type="text"
           aria-label="Buscar por código o dirección"
           placeholder="Buscar por código o dirección…"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 sm:w-72"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:w-72"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
           aria-label="Filtrar por estado"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 sm:w-auto"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 sm:w-auto"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -342,7 +342,7 @@ export default function SignalsPage() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => router.push(`/dashboard/signals/${signal.id}`)}
-                          className="text-emerald-600 hover:underline text-xs font-medium"
+                          className="text-blue-600 hover:underline text-xs font-medium"
                         >
                           Ver
                         </button>
@@ -375,7 +375,7 @@ export default function SignalsPage() {
         <button
           type="button"
           onClick={downloadTemplate}
-          className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+          className="mb-4 text-sm font-medium text-blue-600 hover:underline"
         >
           Descargar plantilla de ejemplo (.csv)
         </button>
@@ -422,7 +422,7 @@ export default function SignalsPage() {
             <button
               type="submit"
               disabled={!importFile || importing}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {importing ? 'Importando...' : 'Importar'}
             </button>

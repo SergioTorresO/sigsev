@@ -27,7 +27,7 @@ export default function DashboardLayout({
           <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-5 lg:px-8">
             <div>
               {subtitle && (
-                <p className="text-sm font-medium text-emerald-700">{subtitle}</p>
+                <p className="text-sm font-medium text-blue-700">{subtitle}</p>
               )}
               <h2 className="mt-1 text-xl font-bold text-zinc-950 sm:text-2xl">{title}</h2>
             </div>

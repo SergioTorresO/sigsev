@@ -98,7 +98,7 @@ export default function ProfilePage() {
     return (
       <DashboardLayout title="Mi perfil" subtitle="Cuenta">
         <div className="flex h-40 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
         </div>
       </DashboardLayout>
     )
@@ -115,7 +115,7 @@ export default function ProfilePage() {
         <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
           <h3 className="mb-1 text-base font-semibold text-zinc-950">Datos personales</h3>
           <p className="mb-4 text-sm text-zinc-500">
-            {profile?.email} · <span className="font-medium text-emerald-700">{profile?.roles?.name ?? 'Sin rol'}</span>
+            {profile?.email} · <span className="font-medium text-blue-700">{profile?.roles?.name ?? 'Sin rol'}</span>
           </p>
 
           <form onSubmit={handleInfoSubmit} className="space-y-4">
@@ -129,26 +129,26 @@ export default function ProfilePage() {
             <div>
               <label htmlFor="profile-full-name" className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
               <input id="profile-full-name" required value={infoForm.full_name} onChange={(e) => setInfoForm((f) => ({ ...f, full_name: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
             </div>
             <div>
               <label htmlFor="profile-phone" className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
               <input id="profile-phone" value={infoForm.phone} onChange={(e) => setInfoForm((f) => ({ ...f, phone: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Opcional" />
             </div>
             <div>
               <label htmlFor="profile-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
               <input id="profile-municipality" value={infoForm.municipality} onChange={(e) => setInfoForm((f) => ({ ...f, municipality: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Opcional" />
             </div>
             <div>
               <label htmlFor="profile-position" className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
               <input id="profile-position" value={infoForm.position} onChange={(e) => setInfoForm((f) => ({ ...f, position: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Opcional" />
             </div>
 
             <button type="submit" disabled={infoLoading}
-              className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+              className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
               {infoLoading ? 'Guardando…' : 'Guardar cambios'}
             </button>
           </form>
@@ -171,19 +171,19 @@ export default function ProfilePage() {
               <label htmlFor="profile-current-password" className="mb-1 block text-sm font-medium text-zinc-700">Contraseña actual *</label>
               <input id="profile-current-password" required type="password" value={pwForm.current_password}
                 onChange={(e) => setPwForm((f) => ({ ...f, current_password: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
             </div>
             <div>
               <label htmlFor="profile-new-password" className="mb-1 block text-sm font-medium text-zinc-700">Nueva contraseña *</label>
               <input id="profile-new-password" required type="password" minLength={6} value={pwForm.new_password}
                 onChange={(e) => setPwForm((f) => ({ ...f, new_password: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
             </div>
             <div>
               <label htmlFor="profile-confirm-password" className="mb-1 block text-sm font-medium text-zinc-700">Confirmar nueva contraseña *</label>
               <input id="profile-confirm-password" required type="password" minLength={6} value={pwForm.confirm_password}
                 onChange={(e) => setPwForm((f) => ({ ...f, confirm_password: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
             </div>
 
             <button type="submit" disabled={pwLoading}

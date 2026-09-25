@@ -173,7 +173,7 @@ export default function DashboardPage() {
           {(user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR') && (
             <a
               href="/dashboard/signals/new"
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
               Nueva señal
             </a>
@@ -335,7 +335,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 rounded-lg bg-zinc-950 p-4 text-white">
-                <p className="text-sm font-semibold text-emerald-300">
+                <p className="text-sm font-semibold text-blue-300">
                   Bienvenido, {user?.full_name?.split(' ')[0]}
                 </p>
                 <p className="mt-2 text-sm text-zinc-200">
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#a1a1aa" />
                     <YAxis allowDecimals={false} tick={{ fontSize: 12 }} stroke="#a1a1aa" />
                     <Tooltip />
-                    <Bar dataKey="count" name="Inspecciones" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" name="Inspecciones" fill="#2563eb" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

@@ -207,7 +207,7 @@ export default function AdminUsersPage() {
       actions={
         <button
           onClick={() => setShowCreate((v) => !v)}
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
           {showCreate ? 'Cancelar' : '+ Nuevo usuario'}
         </button>
@@ -224,27 +224,27 @@ export default function AdminUsersPage() {
             <div>
               <label htmlFor="create-user-name" className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
               <input id="create-user-name" required value={createForm.full_name} onChange={(e) => setCreateForm((f) => ({ ...f, full_name: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
               <label htmlFor="create-user-email" className="mb-1 block text-sm font-medium text-zinc-700">Correo *</label>
               <input id="create-user-email" required type="email" value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
               <label htmlFor="create-user-password" className="mb-1 block text-sm font-medium text-zinc-700">Contraseña *</label>
               <input id="create-user-password" required type="password" value={createForm.password} onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
               <label htmlFor="create-user-phone" className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
               <input id="create-user-phone" value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div>
               <label htmlFor="create-user-role" className="mb-1 block text-sm font-medium text-zinc-700">Rol</label>
               <select id="create-user-role" value={createForm.role_id} onChange={(e) => setCreateForm((f) => ({ ...f, role_id: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                 <option value="">Por defecto (CONSULTA)</option>
                 {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
@@ -252,16 +252,16 @@ export default function AdminUsersPage() {
             <div>
               <label htmlFor="create-user-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
               <input id="create-user-municipality" value={createForm.municipality} onChange={(e) => setCreateForm((f) => ({ ...f, municipality: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div>
               <label htmlFor="create-user-position" className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
               <input id="create-user-position" value={createForm.position} onChange={(e) => setCreateForm((f) => ({ ...f, position: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div className="sm:col-span-2">
               <button type="submit" disabled={createLoading}
-                className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {createLoading ? 'Creando…' : 'Crear usuario'}
               </button>
             </div>
@@ -274,15 +274,15 @@ export default function AdminUsersPage() {
         <input
           type="text" aria-label="Buscar nombre o correo" placeholder="Buscar nombre o correo…" value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-56"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-56"
         />
         <select aria-label="Filtrar por rol" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-auto">
           <option value="">Todos los roles</option>
           {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
         <select aria-label="Filtrar por estado" value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value); setPage(1) }}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-auto">
           <option value="">Todos</option>
           <option value="true">Activos</option>
           <option value="false">Inactivos</option>
@@ -376,17 +376,17 @@ export default function AdminUsersPage() {
           <div>
             <label htmlFor="edit-user-name" className="mb-1 block text-sm font-medium text-zinc-700">Nombre completo *</label>
             <input id="edit-user-name" required value={editForm.full_name} onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
           </div>
           <div>
             <label htmlFor="edit-user-phone" className="mb-1 block text-sm font-medium text-zinc-700">Teléfono</label>
             <input id="edit-user-phone" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
           </div>
           <div>
             <label htmlFor="edit-user-role" className="mb-1 block text-sm font-medium text-zinc-700">Rol</label>
             <select id="edit-user-role" value={editForm.role_id} onChange={(e) => setEditForm((f) => ({ ...f, role_id: e.target.value }))}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
               <option value="">Sin rol</option>
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
@@ -394,12 +394,12 @@ export default function AdminUsersPage() {
           <div>
             <label htmlFor="edit-user-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
             <input id="edit-user-municipality" value={editForm.municipality} onChange={(e) => setEditForm((f) => ({ ...f, municipality: e.target.value }))}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
           </div>
           <div>
             <label htmlFor="edit-user-position" className="mb-1 block text-sm font-medium text-zinc-700">Cargo</label>
             <input id="edit-user-position" value={editForm.position} onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
           </div>
           <div className="flex items-center gap-3">
             <span id="edit-user-status-label" className="text-sm font-medium text-zinc-700">Estado</span>
@@ -417,7 +417,7 @@ export default function AdminUsersPage() {
           </div>
           <div className="sm:col-span-2 flex gap-3 pt-2">
             <button type="submit" disabled={editLoading}
-              className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+              className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
               {editLoading ? 'Guardando…' : 'Guardar cambios'}
             </button>
             <button type="button" onClick={() => setEditUser(null)}

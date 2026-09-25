@@ -131,7 +131,7 @@ export default function ReportesPage() {
                 onClick={() => setReportType(opt.value)}
                 className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
                   reportType === opt.value
-                    ? 'border-emerald-500 bg-emerald-50'
+                    ? 'border-blue-500 bg-blue-50'
                     : 'border-zinc-200 bg-white hover:bg-zinc-50'
                 }`}
               >
@@ -160,12 +160,12 @@ export default function ReportesPage() {
                   <div>
                     <label htmlFor="report-date-from" className="mb-1 block text-sm font-medium text-zinc-700">Desde</label>
                     <input id="report-date-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                   </div>
                   <div>
                     <label htmlFor="report-date-to" className="mb-1 block text-sm font-medium text-zinc-700">Hasta</label>
                     <input id="report-date-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                   </div>
                 </>
               )}
@@ -178,7 +178,7 @@ export default function ReportesPage() {
                   <div>
                     <label htmlFor="report-department" className="mb-1 block text-sm font-medium text-zinc-700">Departamento</label>
                     <select id="report-department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                       <option value="">Todos</option>
                       {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
@@ -186,7 +186,7 @@ export default function ReportesPage() {
                   <div>
                     <label htmlFor="report-municipality" className="mb-1 block text-sm font-medium text-zinc-700">Municipio</label>
                     <select id="report-municipality" value={municipalityId} onChange={(e) => setMunicipalityId(e.target.value)}
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                       <option value="">Todos</option>
                       {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
@@ -194,7 +194,7 @@ export default function ReportesPage() {
                   <div>
                     <label htmlFor="report-zone" className="mb-1 block text-sm font-medium text-zinc-700">Zona</label>
                     <select id="report-zone" value={zoneId} onChange={(e) => setZoneId(e.target.value)} disabled={!municipalityId}
-                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:bg-zinc-50">
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-zinc-50">
                       <option value="">Todas</option>
                       {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
                     </select>
@@ -206,7 +206,7 @@ export default function ReportesPage() {
                 <div>
                   <label htmlFor="report-status" className="mb-1 block text-sm font-medium text-zinc-700">Estado</label>
                   <select id="report-status" value={status} onChange={(e) => setStatus(e.target.value)}
-                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                     <option value="">Todos</option>
                     {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
@@ -222,7 +222,7 @@ export default function ReportesPage() {
               <button
                 onClick={() => handleDownload('xlsx')}
                 disabled={downloading !== null}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
               >
                 {downloading === 'xlsx' ? 'Generando…' : 'Descargar Excel'}
               </button>

@@ -139,7 +139,7 @@ function MaintenancesPageInner() {
         canWrite ? (
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             {showForm ? 'Cancelar' : '+ Nuevo mantenimiento'}
           </button>
@@ -159,7 +159,7 @@ function MaintenancesPageInner() {
             <div>
               <label htmlFor="maintenance-signal" className="mb-1 block text-sm font-medium text-zinc-700">Señal *</label>
               <select id="maintenance-signal" required value={form.signal_id} onChange={(e) => setForm((f) => ({ ...f, signal_id: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                 <option value="">Seleccionar señal…</option>
                 {signals.map((s) => <option key={s.id} value={s.id}>{s.signal_code}</option>)}
               </select>
@@ -167,13 +167,13 @@ function MaintenancesPageInner() {
             <div>
               <label htmlFor="maintenance-date" className="mb-1 block text-sm font-medium text-zinc-700">Fecha programada</label>
               <input id="maintenance-date" type="date" value={form.maintenance_date} onChange={(e) => setForm((f) => ({ ...f, maintenance_date: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             {canAssign && (
               <div>
                 <label htmlFor="maintenance-assigned-to" className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
                 <select id="maintenance-assigned-to" required value={form.assigned_to} onChange={(e) => setForm((f) => ({ ...f, assigned_to: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                   <option value="">Seleccionar técnico…</option>
                   {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
@@ -182,16 +182,16 @@ function MaintenancesPageInner() {
             <div>
               <label htmlFor="maintenance-cost" className="mb-1 block text-sm font-medium text-zinc-700">Costo estimado (COP)</label>
               <input id="maintenance-cost" type="number" min="0" step="1000" value={form.cost} onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="maintenance-description" className="mb-1 block text-sm font-medium text-zinc-700">Descripción *</label>
               <textarea id="maintenance-description" required rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             <div className="sm:col-span-2">
               <button type="submit" disabled={formLoading}
-                className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {formLoading ? 'Guardando…' : 'Crear mantenimiento'}
               </button>
             </div>
@@ -202,7 +202,7 @@ function MaintenancesPageInner() {
       {/* Filters */}
       <div className="mb-4 flex gap-3">
         <select aria-label="Filtrar por estado" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-auto">
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
           <option value="EN_PROCESO">En proceso</option>

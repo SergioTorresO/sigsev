@@ -170,7 +170,7 @@ export default function MapaPage() {
         <header className="border-b border-zinc-200 bg-white px-4 py-4 sm:px-5 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-medium text-emerald-700">Mapa GIS</p>
+              <p className="text-sm font-medium text-blue-700">Mapa GIS</p>
               <h2 className="text-xl font-bold text-zinc-950">Señales en mapa</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -203,7 +203,7 @@ export default function MapaPage() {
                 id="map-search"
                 type="text"
                 placeholder="Código, dirección, municipio…"
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
@@ -218,7 +218,7 @@ export default function MapaPage() {
                 id="map-department"
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">Todos los departamentos</option>
                 {departmentOptions.map((d) => (
@@ -236,7 +236,7 @@ export default function MapaPage() {
                 id="map-municipality"
                 value={municipalityFilter}
                 onChange={(e) => setMunicipalityFilter(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">Todos los municipios</option>
                 {municipalityOptions.map((m) => (
@@ -255,7 +255,7 @@ export default function MapaPage() {
                 value={zoneFilter}
                 onChange={(e) => setZoneFilter(e.target.value)}
                 disabled={zoneOptions.length === 0}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-400"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-zinc-50 disabled:text-zinc-400"
               >
                 <option value="">Todas las zonas</option>
                 {zoneOptions.map((z) => (
@@ -334,7 +334,7 @@ export default function MapaPage() {
             {loading ? (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center">
-                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
                   <p className="text-sm text-zinc-500">Cargando señales…</p>
                 </div>
               </div>

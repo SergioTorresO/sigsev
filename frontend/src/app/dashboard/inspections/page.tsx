@@ -132,7 +132,7 @@ export default function InspectionsPage() {
         canWrite ? (
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             {showForm ? 'Cancelar' : '+ Nueva inspección'}
           </button>
@@ -152,7 +152,7 @@ export default function InspectionsPage() {
             <div>
               <label htmlFor="inspection-signal" className="mb-1 block text-sm font-medium text-zinc-700">Señal *</label>
               <select id="inspection-signal" required value={form.signal_id} onChange={(e) => setForm((f) => ({ ...f, signal_id: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                 <option value="">Seleccionar señal…</option>
                 {signals.map((s) => <option key={s.id} value={s.id}>{s.signal_code}</option>)}
               </select>
@@ -160,7 +160,7 @@ export default function InspectionsPage() {
             <div>
               <label htmlFor="inspection-status" className="mb-1 block text-sm font-medium text-zinc-700">Estado observado *</label>
               <select id="inspection-status" required value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                 <option value="BUENO">Bueno</option>
                 <option value="REGULAR">Regular</option>
                 <option value="DETERIORADO">Deteriorado</option>
@@ -172,7 +172,7 @@ export default function InspectionsPage() {
               <div>
                 <label htmlFor="inspection-technician" className="mb-1 block text-sm font-medium text-zinc-700">Asignar a *</label>
                 <select id="inspection-technician" required value={form.technician_id} onChange={(e) => setForm((f) => ({ ...f, technician_id: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none">
                   <option value="">Seleccionar técnico…</option>
                   {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                 </select>
@@ -181,21 +181,21 @@ export default function InspectionsPage() {
             <div>
               <label htmlFor="inspection-latitude" className="mb-1 block text-sm font-medium text-zinc-700">Latitud GPS</label>
               <input id="inspection-latitude" type="number" step="any" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div>
               <label htmlFor="inspection-longitude" className="mb-1 block text-sm font-medium text-zinc-700">Longitud GPS</label>
               <input id="inspection-longitude" type="number" step="any" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" placeholder="Opcional" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Opcional" />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="inspection-observations" className="mb-1 block text-sm font-medium text-zinc-700">Observaciones</label>
               <textarea id="inspection-observations" rows={2} value={form.observations} onChange={(e) => setForm((f) => ({ ...f, observations: e.target.value }))}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             <div className="sm:col-span-2 flex gap-3">
               <button type="submit" disabled={formLoading}
-                className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                className="rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {formLoading ? 'Guardando…' : 'Registrar'}
               </button>
             </div>
@@ -206,7 +206,7 @@ export default function InspectionsPage() {
       {/* Filters */}
       <div className="mb-4 flex gap-3">
         <select aria-label="Filtrar por estado" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto">
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-auto">
           <option value="">Todos los estados</option>
           <option value="BUENO">Bueno</option>
           <option value="REGULAR">Regular</option>

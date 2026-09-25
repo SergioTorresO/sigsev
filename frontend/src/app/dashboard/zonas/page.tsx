@@ -260,13 +260,13 @@ export default function ZonasPage() {
             placeholder="Buscar por nombre…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-auto"
           />
           <select
             aria-label="Filtrar por municipio"
             value={municipalityFilter}
             onChange={(e) => { setMunicipalityFilter(e.target.value); setPage(1) }}
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none sm:w-auto"
+            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none sm:w-auto"
           >
             <option value="">Todos los municipios</option>
             {municipalityOptionsForFilter.map((m) => (
@@ -283,7 +283,7 @@ export default function ZonasPage() {
           </button>
           <button
             onClick={openCreate}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             + Nueva zona
           </button>
@@ -369,7 +369,7 @@ export default function ZonasPage() {
                   id="zone-department"
                   value={form.department_id}
                   onChange={(e) => setForm((f) => ({ ...f, department_id: e.target.value, municipality_id: '' }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">Selecciona un departamento</option>
                   {departments.map((d) => (
@@ -385,7 +385,7 @@ export default function ZonasPage() {
                   value={form.municipality_id}
                   onChange={(e) => setForm((f) => ({ ...f, municipality_id: e.target.value }))}
                   disabled={!form.department_id}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-400"
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-zinc-50 disabled:text-zinc-400"
                 >
                   <option value="">Selecciona un municipio</option>
                   {formMunicipalityOptions.map((m) => (
@@ -402,7 +402,7 @@ export default function ZonasPage() {
                   placeholder="Ej. Comuna 1, Vereda La Esperanza…"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -432,7 +432,7 @@ export default function ZonasPage() {
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   rows={2}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -451,7 +451,7 @@ export default function ZonasPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                 >
                   {saving ? 'Guardando…' : 'Guardar'}
                 </button>
@@ -499,7 +499,7 @@ export default function ZonasPage() {
         <button
           type="button"
           onClick={downloadZonesTemplate}
-          className="mb-4 text-sm font-medium text-emerald-600 hover:underline"
+          className="mb-4 text-sm font-medium text-blue-600 hover:underline"
         >
           Descargar plantilla de ejemplo (.csv)
         </button>
@@ -546,7 +546,7 @@ export default function ZonasPage() {
             <button
               type="submit"
               disabled={!importFile || importing}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {importing ? 'Importando...' : 'Importar'}
             </button>

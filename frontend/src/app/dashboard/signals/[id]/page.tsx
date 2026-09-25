@@ -107,7 +107,7 @@ export default function SignalDetailPage() {
     return (
       <DashboardLayout title="Señal" subtitle="Señales">
         <div className="flex h-40 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
         </div>
       </DashboardLayout>
     )

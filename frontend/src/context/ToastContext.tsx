@@ -24,7 +24,7 @@ const AUTO_DISMISS_MS = 5000
 const TOAST_STYLES: Record<ToastType, string> = {
   success: 'bg-green-50 border-green-300 text-green-800',
   error: 'bg-red-50 border-red-300 text-red-800',
-  info: 'bg-blue-50 border-blue-300 text-blue-800',
+  info: 'bg-sky-50 border-sky-300 text-sky-800',
 }
 
 const TOAST_ICON: Record<ToastType, string> = {

@@ -176,7 +176,7 @@ export default function MisAsignacionesPage() {
                           checked={isInspectionDone(insp)}
                           disabled={isInspectionDone(insp)}
                           onChange={() => setTarget({ kind: 'inspection', item: insp })}
-                          className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-60"
+                          className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60"
                         />
                         {isInspectionDone(insp) ? 'Realizada' : 'Marcar'}
                       </label>
@@ -252,7 +252,7 @@ export default function MisAsignacionesPage() {
                           checked={isMaintenanceDone(maint)}
                           disabled={isMaintenanceDone(maint)}
                           onChange={() => setTarget({ kind: 'maintenance', item: maint })}
-                          className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-60"
+                          className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60"
                         />
                         {isMaintenanceDone(maint) ? 'Realizada' : 'Marcar'}
                       </label>
@@ -368,7 +368,7 @@ function CompleteTaskModal({
               id="complete-status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               {isInspection ? (
                 <>
@@ -394,7 +394,7 @@ function CompleteTaskModal({
                   type="checkbox"
                   checked={needsMaintenance}
                   onChange={(e) => setNeedsMaintenance(e.target.checked)}
-                  className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                  className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
                 />
                 La señal necesita mantenimiento
               </label>
@@ -413,7 +413,7 @@ function CompleteTaskModal({
                 id="complete-signal-status"
                 value={signalStatus}
                 onChange={(e) => setSignalStatus(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 <option value="BUENO">Bueno</option>
                 <option value="REGULAR">Regular</option>
@@ -431,7 +431,7 @@ function CompleteTaskModal({
               onChange={(e) => setObservations(e.target.value)}
               rows={3}
               required
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               placeholder="Describe lo realizado…"
             />
           </div>
@@ -457,7 +457,7 @@ function CompleteTaskModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {submitting ? 'Guardando...' : 'Marcar como realizada'}
             </button>

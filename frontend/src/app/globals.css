@@ -8,10 +8,10 @@ body {
   color: #0f172a;
 }
 
-/* Scrollbar oscura para el sidebar (fondo zinc-950): thumb emerald-600, hover emerald-500, sin track visible */
+/* Scrollbar oscura para el sidebar (fondo zinc-950): thumb blue-600, hover blue-500, sin track visible */
 .sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #059669 transparent;
+  scrollbar-color: #2563eb transparent;
 }
 .sidebar-scroll::-webkit-scrollbar {
   width: 6px;
@@ -20,9 +20,9 @@ body {
   background: transparent;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background-color: #059669;
+  background-color: #2563eb;
   border-radius: 9999px;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #10b981;
+  background-color: #3b82f6;
 }

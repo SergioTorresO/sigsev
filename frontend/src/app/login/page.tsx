@@ -49,7 +49,7 @@ function LoginForm() {
         className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm sm:p-8"
       >
         <div className="mb-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
             Inventario vial
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-950">SIGSEV</h1>
@@ -71,7 +71,7 @@ function LoginForm() {
           type="email"
           aria-label="Correo electronico"
           placeholder="Correo electronico"
-          className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -81,7 +81,7 @@ function LoginForm() {
           type="password"
           aria-label="Contrasena"
           placeholder="Contrasena"
-          className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+          className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -90,13 +90,13 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-md bg-emerald-600 p-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-md bg-blue-600 p-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
         >
           {loading ? 'Ingresando...' : 'Ingresar'}
         </button>
 
         <p className="text-center text-sm text-zinc-500">
-          <a href="/forgot-password" className="text-emerald-600 hover:underline">
+          <a href="/forgot-password" className="text-blue-600 hover:underline">
             Olvidaste tu contrasena?
           </a>
         </p>

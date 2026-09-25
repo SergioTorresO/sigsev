@@ -46,7 +46,7 @@ function ResetPasswordForm() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-100 p-4">
       <div className="flex w-full max-w-[400px] flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
             Inventario vial
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-950">SIGSEV</h1>
@@ -69,7 +69,7 @@ function ResetPasswordForm() {
               type="password"
               aria-label="Nueva contraseña"
               placeholder="Nueva contraseña"
-              className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
@@ -80,7 +80,7 @@ function ResetPasswordForm() {
               type="password"
               aria-label="Confirmar contraseña"
               placeholder="Confirmar contraseña"
-              className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="rounded-md border border-zinc-300 p-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={6}
@@ -90,7 +90,7 @@ function ResetPasswordForm() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-emerald-600 p-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="rounded-md bg-blue-600 p-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {loading ? 'Guardando...' : 'Restablecer contraseña'}
             </button>
@@ -98,7 +98,7 @@ function ResetPasswordForm() {
         )}
 
         <p className="text-center text-sm text-zinc-500">
-          <a href="/login" className="text-emerald-600 hover:underline">
+          <a href="/login" className="text-blue-600 hover:underline">
             Volver a iniciar sesión
           </a>
         </p>

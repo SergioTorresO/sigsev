@@ -3,28 +3,38 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
+import Logo from './Logo'
+import {
+  IconHome,
+  IconMap,
+  IconAlertTriangle,
+  IconBuildingCommunity,
+  IconChecklist,
+  IconClipboardCheck,
+  IconTool,
+  IconReceipt,
+  IconUsers,
+  IconHistory,
+  IconCategory,
+  IconLogout,
+  IconMenu2,
+  IconX,
+  type Icon as TablerIcon,
+} from '@tabler/icons-react'
 
-// Iconos en SVG inline (sin dependencias externas)
-function Icon({ path, className = 'h-5 w-5' }: { path: string; className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d={path} />
-    </svg>
-  )
-}
-
-const ICONS: Record<string, string> = {
-  Dashboard: 'M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
-  'Mapa GIS': 'M9 4 3 6.5v14L9 18l6 2.5 6-2.5v-14L15 6.5 9 4Zm0 0v14m6-11.5v14',
-  Señales: 'M12 2v6m0 0-7 12h14L12 8Zm-2.2 9h4.4',
-  Zonas: 'M3 11l9-7 9 7M5 10v9h14v-9M9 19v-5h6v5',
-  'Mis asignaciones': 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
-  Inspecciones: 'M9 11l2 2 4-4M5 5h14v15l-3-2-3 2-3-2-3 2V5Z',
-  Mantenimientos: 'M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.83 2.83-2-2L14.7 6.3Z',
-  Reportes: 'M7 3h7l3 3v15H7V3Zm7 0v3h3M9 13h6M9 17h6M9 9h2',
-  Usuarios: 'M16 14a4 4 0 1 0-8 0M3 21a7 7 0 0 1 18 0M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
-  Auditoría: 'M9 12h6m-6 4h6M5 4h14v16l-4-3-3 2-3-2-4 3V4Z',
-  Catálogo: 'M4 6h16M4 10h16M4 14h8M4 18h8M15 15l2 2 4-4',
+// Iconos de Tabler Icons (@tabler/icons-react), uno por módulo del sidebar.
+const NAV_ICONS: Record<string, TablerIcon> = {
+  Dashboard: IconHome,
+  'Mapa GIS': IconMap,
+  Señales: IconAlertTriangle,
+  Zonas: IconBuildingCommunity,
+  'Mis asignaciones': IconChecklist,
+  Inspecciones: IconClipboardCheck,
+  Mantenimientos: IconTool,
+  Reportes: IconReceipt,
+  Usuarios: IconUsers,
+  Auditoría: IconHistory,
+  Catálogo: IconCategory,
 }
 
 const navItems = [
@@ -83,15 +93,13 @@ export default function Sidebar() {
     : navItems
   ).filter((item) => item.href !== '/dashboard/mis-asignaciones' || user?.roles?.name === 'TECNICO')
 
-  // Marca/logo: badge emerald con "S" + wordmark, reutilizado en drawer y sidebar de escritorio
+  // Marca/logo: mark real de SIGSEV + wordmark, reutilizado en drawer y sidebar de escritorio
   // (función simple, no componente, para no remontar estos nodos en cada re-render de Sidebar)
   const renderLogo = (collapsed = false) => (
     <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-bold text-zinc-950 shadow-lg shadow-emerald-500/20">
-        S
-      </div>
+      <Logo className="h-9 w-9 shrink-0 rounded-lg shadow-lg shadow-blue-500/20" />
       <div className={collapsed ? 'hidden group-hover:block' : ''}>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/90">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400/90">
           Inventario vial
         </p>
         <h1 className="-mt-0.5 text-xl font-bold text-white">SIGSEV</h1>
@@ -99,28 +107,31 @@ export default function Sidebar() {
     </div>
   )
 
-  // Ítem de navegación: pill emerald sólido cuando está activo, hover sutil en zinc cuando no
+  // Ítem de navegación: pill azul sólido cuando está activo, hover sutil en zinc cuando no
   const renderNavLink = (
     item: { label: string; href: string },
     isActive: boolean,
     collapsed = false,
-  ) => (
-    <a
-      key={item.label}
-      href={item.href}
-      title={collapsed ? item.label : undefined}
-      className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-150 ${
-        isActive
-          ? 'bg-emerald-500 text-zinc-950 shadow-md shadow-emerald-500/30'
-          : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100'
-      }`}
-    >
-      <Icon path={ICONS[item.label]} className="h-5 w-5 shrink-0" />
-      <span className={collapsed ? 'opacity-0 transition-opacity duration-150 group-hover:opacity-100' : ''}>
-        {item.label}
-      </span>
-    </a>
-  )
+  ) => {
+    const ItemIcon = NAV_ICONS[item.label]
+    return (
+      <a
+        key={item.label}
+        href={item.href}
+        title={collapsed ? item.label : undefined}
+        className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-150 ${
+          isActive
+            ? 'bg-blue-500 text-zinc-950 shadow-md shadow-blue-500/30'
+            : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100'
+        }`}
+      >
+        <ItemIcon size={20} className="shrink-0" />
+        <span className={collapsed ? 'opacity-0 transition-opacity duration-150 group-hover:opacity-100' : ''}>
+          {item.label}
+        </span>
+      </a>
+    )
+  }
 
   const renderProfileFooter = (collapsed = false) => (
     <div className="border-t border-zinc-800/80 pt-4">
@@ -131,13 +142,13 @@ export default function Sidebar() {
           pathname.startsWith('/dashboard/profile') ? 'bg-zinc-800/70' : ''
         }`}
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-semibold text-zinc-950 shadow-md shadow-emerald-500/20 ring-2 ring-zinc-800">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-sm font-semibold text-zinc-950 shadow-md shadow-blue-500/20 ring-2 ring-zinc-800">
           {user?.full_name?.charAt(0).toUpperCase() ?? '?'}
         </div>
         <div className={`min-w-0 ${collapsed ? 'opacity-0 transition-opacity duration-150 group-hover:opacity-100' : ''}`}>
           <p className="truncate text-sm font-medium text-zinc-100">{user?.full_name}</p>
           <p className="truncate text-xs text-zinc-500">{user?.email}</p>
-          <p className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-emerald-400">
+          <p className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-blue-400">
             {user?.roles?.name ?? 'Sin rol'}
           </p>
         </div>
@@ -147,7 +158,7 @@ export default function Sidebar() {
         title={collapsed ? 'Cerrar sesión' : undefined}
         className="mt-3 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-zinc-800 px-2.5 py-2 text-xs font-medium text-zinc-400 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
       >
-        <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-4 w-4 shrink-0" />
+        <IconLogout size={16} className="shrink-0" />
         <span className={collapsed ? 'hidden group-hover:inline' : ''}>Cerrar sesión</span>
       </button>
     </div>
@@ -163,7 +174,7 @@ export default function Sidebar() {
           aria-label="Abrir menú de navegación"
           className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white"
         >
-          <Icon path="M4 6h16M4 12h16M4 18h16" className="h-6 w-6" />
+          <IconMenu2 size={24} />
         </button>
         <span className="text-lg font-bold">SIGSEV</span>
         <span className="h-9 w-9" />
@@ -192,7 +203,7 @@ export default function Sidebar() {
             aria-label="Cerrar menú de navegación"
             className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white"
           >
-            <Icon path="M6 6l12 12M18 6 6 18" className="h-5 w-5" />
+            <IconX size={20} />
           </button>
         </div>
 

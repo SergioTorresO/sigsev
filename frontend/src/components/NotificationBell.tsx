@@ -142,7 +142,7 @@ export default function NotificationBell() {
             <p className="text-sm font-semibold text-zinc-900">Notificaciones</p>
             <div className="flex items-center gap-3">
               {unreadCount > 0 && (
-                <button onClick={handleMarkAllRead} className="text-xs font-medium text-emerald-700 hover:underline">
+                <button onClick={handleMarkAllRead} className="text-xs font-medium text-blue-700 hover:underline">
                   Marcar todas como leídas
                 </button>
               )}
@@ -187,7 +187,7 @@ export default function NotificationBell() {
                 key={n.id}
                 onClick={() => !n.is_read && handleMarkRead(n.id)}
                 className={`block w-full border-b border-zinc-50 px-4 py-3 text-left transition-colors last:border-b-0 ${
-                  n.is_read ? 'bg-white' : 'bg-emerald-50/60 hover:bg-emerald-50'
+                  n.is_read ? 'bg-white' : 'bg-blue-50/60 hover:bg-blue-50'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">

@@ -227,7 +227,7 @@ export default function CatalogoPage() {
               onClick={() => setTab('categories')}
               className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
                 tab === 'categories'
-                  ? 'border-emerald-600 text-emerald-600'
+                  ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'
               }`}
             >
@@ -237,7 +237,7 @@ export default function CatalogoPage() {
               onClick={() => setTab('types')}
               className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
                 tab === 'types'
-                  ? 'border-emerald-600 text-emerald-600'
+                  ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'
               }`}
             >
@@ -252,7 +252,7 @@ export default function CatalogoPage() {
             <div className="flex justify-end">
               <button
                 onClick={openNewCat}
-                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 + Nueva categoría
               </button>
@@ -279,7 +279,7 @@ export default function CatalogoPage() {
                         <td className="px-4 py-3 font-medium text-zinc-900">{cat.name}</td>
                         <td className="px-4 py-3 text-zinc-600">{cat.description ?? '—'}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          <span className="inline-flex items-center justify-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
                             {getCatCount(cat)}
                           </span>
                         </td>
@@ -317,12 +317,12 @@ export default function CatalogoPage() {
                 placeholder="Buscar por código o nombre..."
                 value={stSearch}
                 onChange={(e) => setStSearch(e.target.value)}
-                className="w-64 rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+                className="w-64 rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
               <select
                 value={stCategoryFilter}
                 onChange={(e) => setStCategoryFilter(e.target.value)}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+                className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Todas las categorías</option>
                 {categories.map((c) => (
@@ -331,7 +331,7 @@ export default function CatalogoPage() {
               </select>
               <button
                 onClick={openNewSt}
-                className="ml-auto rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className="ml-auto rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 + Nuevo tipo
               </button>
@@ -415,7 +415,7 @@ export default function CatalogoPage() {
               required
               value={catForm.name}
               onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               placeholder="Ej: Señales reglamentarias"
             />
           </div>
@@ -428,7 +428,7 @@ export default function CatalogoPage() {
               rows={3}
               value={catForm.description}
               onChange={(e) => setCatForm((f) => ({ ...f, description: e.target.value }))}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               placeholder="Descripción opcional de la categoría"
             />
           </div>
@@ -443,7 +443,7 @@ export default function CatalogoPage() {
             <button
               type="submit"
               disabled={catSubmitting}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {catSubmitting ? 'Guardando...' : editCat ? 'Actualizar' : 'Crear'}
             </button>
@@ -499,7 +499,7 @@ export default function CatalogoPage() {
                 required
                 value={stForm.code}
                 onChange={(e) => setStForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm focus:border-emerald-500 focus:outline-none"
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none"
                 placeholder="Ej: SR-01"
               />
             </div>
@@ -512,7 +512,7 @@ export default function CatalogoPage() {
                 required
                 value={stForm.category_id}
                 onChange={(e) => setStForm((f) => ({ ...f, category_id: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+                className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Seleccionar...</option>
                 {categories.map((c) => (
@@ -531,7 +531,7 @@ export default function CatalogoPage() {
               required
               value={stForm.name}
               onChange={(e) => setStForm((f) => ({ ...f, name: e.target.value }))}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               placeholder="Ej: Pare"
             />
           </div>
@@ -544,7 +544,7 @@ export default function CatalogoPage() {
               rows={3}
               value={stForm.description}
               onChange={(e) => setStForm((f) => ({ ...f, description: e.target.value }))}
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               placeholder="Descripción opcional del tipo de señal"
             />
           </div>
@@ -559,7 +559,7 @@ export default function CatalogoPage() {
             <button
               type="submit"
               disabled={stSubmitting}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {stSubmitting ? 'Guardando...' : editSt ? 'Actualizar' : 'Crear'}
             </button>

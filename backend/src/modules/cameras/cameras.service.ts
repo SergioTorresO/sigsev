@@ -153,16 +153,26 @@ export const updateCamera = async (id: string, data: UpdateCameraDTO) => {
   // Misma categorización automática que createCamera, en ambos sentidos:
   // - si la fecha (nueva o la que ya tenía) está vencida y el estado
   //   resultante sería EN_SERVICIO (explícito o heredado), pasa a DESCALIBRADA.
-  // - si se acaba de recalibrar (fecha ya no vencida) y el estado seguía en
-  //   DESCALIBRADA sin que el usuario haya elegido otro manualmente, vuelve a
-  //   EN_SERVICIO — recalibrar es justamente lo que limpia esa marca.
+  // - si se ACABA de recalibrar en esta misma edición (la fecha cambia y ya
+  //   no está vencida) y el estado seguía en DESCALIBRADA sin que el usuario
+  //   haya elegido otro manualmente, vuelve a EN_SERVICIO.
+  //   Importante: esto requiere que `last_calibration_date` haya cambiado de
+  //   verdad, no solo que "no esté vencida" — el formulario de edición
+  //   siempre reenvía el `status` actual aunque el usuario no lo toque, así
+  //   que si solo exigiéramos "no vencida" cualquier edición de un campo no
+  //   relacionado (marca, dirección, etc.) en una cámara marcada DESCALIBRADA
+  //   manualmente por otra razón (no por la fecha) la revertiría sola a
+  //   EN_SERVICIO sin que nadie lo pidiera.
   const payload: UpdateCameraDTO = { ...data }
-  const nextCalibrationDate = data.last_calibration_date !== undefined ? data.last_calibration_date : existing.last_calibration_date
+  const calibrationDateProvided = data.last_calibration_date !== undefined
+  const nextCalibrationDate = calibrationDateProvided ? data.last_calibration_date : existing.last_calibration_date
   const overdue = isCalibrationOverdue(nextCalibrationDate)
+  const calibrationJustRenewed =
+    calibrationDateProvided && data.last_calibration_date !== existing.last_calibration_date && !overdue
 
   if (overdue && (data.status === undefined ? existing.status === 'EN_SERVICIO' : data.status === 'EN_SERVICIO')) {
     payload.status = 'DESCALIBRADA'
-  } else if (!overdue && existing.status === 'DESCALIBRADA' && (data.status === undefined || data.status === 'DESCALIBRADA')) {
+  } else if (calibrationJustRenewed && existing.status === 'DESCALIBRADA' && (data.status === undefined || data.status === 'DESCALIBRADA')) {
     payload.status = 'EN_SERVICIO'
   }
 

@@ -8,6 +8,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a l
 - **Inventario de señales**: catálogo georreferenciado con categoría, tipo, estado y municipio/zona, incluyendo carga masiva desde CSV/Excel.
 - **Mapa GIS interactivo** (Leaflet): señales geolocalizadas con filtros por estado, búsqueda y ubicación (departamento → municipio → zona).
 - **Gestión de zonas**: comunas, barrios y corregimientos por municipio.
+- **Cámaras de fotodetección**: inventario de cámaras fijas y móviles (serie, marca/modelo, calibración, límite de velocidad fiscalizado), con estado operativo propio y carga masiva desde CSV/Excel.
 - **Inspecciones y mantenimientos**: registro, asignación a técnicos y seguimiento de estado.
 - **Notificaciones**: alertas de mantenimientos vencidos y señales en mal estado.
 - **Dashboard con gráficas**: señales por estado, inspecciones por mes.
@@ -90,7 +91,7 @@ pnpm dev   # levanta backend y frontend juntos (concurrently)
 | Rol | Acceso |
 |---|---|
 | **ADMIN** | Acceso total: todos los módulos, gestión de usuarios y auditoría. |
-| **SUPERVISOR** | Todos los módulos excepto Administración (usuarios y auditoría). Gestiona señales, zonas, inspecciones y mantenimientos, y puede asignarlos a técnicos. |
+| **SUPERVISOR** | Todos los módulos excepto Administración (usuarios y auditoría). Gestiona señales, zonas, cámaras, inspecciones y mantenimientos, y puede asignarlos a técnicos. |
 | **TECNICO** | Dashboard, Mapa GIS, Señales (puede registrar y editar señales en campo, pero no desactivarlas/eliminarlas) y Mis asignaciones (completa las inspecciones/mantenimientos que le asignen). |
 | **CONSULTA** | Dashboard y Mapa GIS únicamente. Rol por defecto al crear un usuario sin especificar rol. |
 
@@ -105,5 +106,5 @@ El primer usuario ADMIN se crea registrándose normalmente y actualizando su rol
 ## Notas
 
 - La base de datos se accede exclusivamente vía HTTPS (Supabase JS), no por conexión TCP directa a Postgres.
-- Las señales se desactivan (`is_active = false`) en lugar de borrarse; zonas y usuarios sí se eliminan físicamente.
+- Las señales y cámaras se desactivan (`is_active = false`) en lugar de borrarse; zonas y usuarios sí se eliminan físicamente.
 - Para detalles internos de arquitectura, decisiones técnicas y estructura de carpetas, ver `CLAUDE.md`.

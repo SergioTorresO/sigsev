@@ -13,7 +13,7 @@ Aplicación web fullstack para inventariar, inspeccionar y dar mantenimiento a s
 - **Validación**: Zod
 - **Gráficas**: Recharts (dashboard)
 - **Reportes**: exportación a Excel/PDF (`xlsx`, generación de PDF en backend)
-- **Carga masiva**: `multer` + `xlsx` (CSV/Excel) en `signals/bulk-import` y `zones/bulk-import`
+- **Carga masiva**: `multer` + `xlsx` (CSV/Excel) en `signals/bulk-import`, `zones/bulk-import` y `cameras/bulk-import`
 - **Email**: Resend (`resend`) — recuperación de contraseña y notificaciones por correo; sin `RESEND_API_KEY` configurada, el flujo sigue funcionando en modo degradado (ver decisión 30)
 - **Logging**: `pino` + `pino-http` (request-id por request, ver decisión 24 de `PRODUCTION_CHECKLIST.md`)
 - **Despliegue**: backend en Render (Blueprint `render.yaml`), frontend en Vercel; CI en GitHub Actions (`.github/workflows/ci.yml`) — ver sección "Despliegue y CI" al final
@@ -42,6 +42,7 @@ sigsev-project/
 │   │   │   ├── inspections/         # CRUD inspecciones + actualiza status señal
 │   │   │   ├── maintenances/        # CRUD mantenimientos + completed_at + job de vencidos
 │   │   │   ├── zones/                # CRUD zonas/comunas/corregimientos por municipio (ADMIN/SUPERVISOR) + carga masiva CSV/Excel
+│   │   │   ├── cameras/              # CRUD cámaras de fotodetección fijas/móviles (soft delete, ADMIN/SUPERVISOR) + carga masiva CSV/Excel
 │   │   │   ├── references/          # GET de catálogos: departamentos, municipios, zonas, categorías, tipos de señal (consumido por formularios/filtros)
 │   │   │   ├── catalog/             # CRUD de categorías y tipos de señal (solo ADMIN puede escribir; lectura para cualquier rol)
 │   │   │   ├── users/               # CRUD usuarios (solo ADMIN)
@@ -66,6 +67,10 @@ sigsev-project/
     │   │   │   │   ├── new/page.tsx   # Crear señal (redirige si no es ADMIN/SUPERVISOR)
     │   │   │   │   └── [id]/edit/page.tsx  # (redirige si no es ADMIN/SUPERVISOR)
     │   │   │   ├── zonas/page.tsx          # CRUD de zonas (ADMIN/SUPERVISOR), selección en cascada Departamento→Municipio + carga masiva CSV/Excel
+    │   │   │   ├── cameras/
+    │   │   │   │   ├── page.tsx       # Lista (editar/activar-desactivar/crear/carga masiva, solo ADMIN/SUPERVISOR, sin nivel TECNICO)
+    │   │   │   │   ├── new/page.tsx   # Crear cámara (redirige si no es ADMIN/SUPERVISOR)
+    │   │   │   │   └── [id]/edit/page.tsx  # (redirige si no es ADMIN/SUPERVISOR)
     │   │   │   ├── inspections/page.tsx    # Solo ADMIN/SUPERVISOR (redirige a /dashboard para TECNICO/CONSULTA); selector "Asignar a"
     │   │   │   ├── maintenances/page.tsx   # Solo ADMIN/SUPERVISOR (redirige a /dashboard para TECNICO/CONSULTA); selector "Asignar a"
     │   │   │   ├── mis-asignaciones/page.tsx  # Solo TECNICO: inspecciones/mantenimientos asignados a él (solo lectura)
@@ -81,10 +86,10 @@ sigsev-project/
     │   │   ├── reset-password/page.tsx     # Define nueva contraseña con el token de la URL (POST /api/auth/reset-password)
     │   │   └── layout.tsx             # Wraps con <Providers>
     │   ├── components/
-    │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales+Mis asignaciones; ADMIN/SUPERVISOR: todo incl. Zonas); "Administración" (Catálogo, Usuarios, Auditoría) solo ADMIN; iconos de `@tabler/icons-react`, logo real vía <Logo />
+    │   │   ├── Sidebar.tsx            # Sidebar colapsable (hover para expandir), compartido por TODO el layout; nav filtrado por rol (CONSULTA: Dashboard+Mapa; TECNICO: +Señales+Mis asignaciones; ADMIN/SUPERVISOR: todo incl. Zonas y Cámaras); "Administración" (Catálogo, Usuarios, Auditoría) solo ADMIN; iconos de `@tabler/icons-react`, logo real vía <Logo />
     │   │   ├── Logo.tsx               # Marca de SIGSEV: SVG inline (triángulo + carretera en S + punto), degradado blue-400→blue-600 (ver decisión 33)
     │   │   ├── DashboardLayout.tsx    # Wrapper de header/main que renderiza <Sidebar />
-    │   │   ├── MapView.tsx            # Componente Leaflet (no SSR)
+    │   │   ├── MapView.tsx            # Componente Leaflet (no SSR); dos L.LayerGroup independientes (señales/cámaras) para que actualizar un tipo de marcador no borre al otro (ver decisión 34)
     │   │   ├── NotificationBell.tsx   # Campanita de notificaciones (mantenimientos vencidos, señales en mal estado)
     │   │   ├── Modal.tsx              # Modal reutilizable (overlay + panel + ARIA), usa useModalA11y internamente; adoptado en señales, zonas, inspecciones, mantenimientos, mis-asignaciones, admin/users, admin/audit
     │   │   └── Pagination.tsx         # Paginación reutilizable ("Página X de Y" + Anterior/Siguiente), mismo conjunto de páginas que Modal
@@ -142,6 +147,12 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 | GET | /api/zones/:id | ✅ cualquier rol | Ver zona |
 | POST/PUT/DELETE | /api/zones(/:id) | ✅ ADMIN, SUPERVISOR | Crear / editar / eliminar zona (eliminar falla con mensaje claro si hay señales asociadas) |
 | POST | /api/zones/bulk-import | ✅ ADMIN, SUPERVISOR | Carga masiva de zonas desde CSV/Excel (.csv, .xlsx, .xls), mismo patrón todo-o-nada que señales |
+| GET | /api/cameras | ✅ cualquier rol | Listar cámaras de fotodetección (paginado, filtra por `status`, `camera_type`, `municipality_id`, `zone_id`, `is_active`, búsqueda por `search`) |
+| GET | /api/cameras/:id | ✅ cualquier rol | Ver cámara |
+| POST/PUT | /api/cameras(/:id) | ✅ ADMIN, SUPERVISOR | Crear / editar cámara (sin nivel TECNICO, a diferencia de señales) |
+| DELETE | /api/cameras/:id | ✅ ADMIN, SUPERVISOR | Desactivar cámara (soft delete, igual que señales — no borra físico) |
+| PATCH | /api/cameras/:id/toggle-active | ✅ ADMIN, SUPERVISOR | Reactivar/desactivar cámara |
+| POST | /api/cameras/bulk-import | ✅ ADMIN, SUPERVISOR | Carga masiva de cámaras desde CSV/Excel (.csv, .xlsx, .xls), mismo patrón todo-o-nada que señales/zonas |
 | GET | /api/ref/departments | ✅ cualquier rol | Departamentos de Colombia |
 | GET | /api/ref/municipalities | ✅ cualquier rol | Municipios (filtra por `department_id`) — catálogo completo, 1119 municipios |
 | GET | /api/ref/zones | ✅ cualquier rol | Zonas (filtra por `municipality_id`) — usado por los formularios de señales para poblar selects simples |
@@ -150,7 +161,7 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 | GET | /api/users, /api/users/roles, /api/users/:id | ✅ ADMIN, SUPERVISOR | Listar/ver usuarios y roles (SUPERVISOR solo lo usa internamente para el selector "Asignar a" en inspecciones/mantenimientos; no tiene acceso a la página /dashboard/admin/users) |
 | POST/PUT/PATCH/DELETE | /api/users(/:id) | ✅ ADMIN | Crear / editar / activar-desactivar / eliminar usuario |
 | GET | /api/profile | ✅ cualquier rol | Ver/editar el propio perfil (nombre, teléfono, contraseña) |
-| GET | /api/reports/... | ✅ ADMIN, SUPERVISOR | Generación de reportes (Excel/PDF): señales por estado, mantenimientos por período, etc. |
+| GET | /api/reports/... | ✅ ADMIN, SUPERVISOR | Generación de reportes (Excel/PDF): señales por estado, mantenimientos por período, cámaras por tipo y estado, etc. |
 | GET | /api/notifications | ✅ cualquier rol | Notificaciones del usuario (mantenimientos vencidos, señales en mal estado) |
 | PATCH | /api/notifications/read-all | ✅ cualquier rol | Marca como leídas todas las notificaciones visibles para el usuario |
 | DELETE | /api/notifications/clear-all | ✅ cualquier rol | Vacía la bandeja: borra físicamente las notificaciones visibles para el usuario (en ADMIN/SUPERVISOR esto incluye las "broadcast" compartidas, igual que read-all) |
@@ -169,6 +180,7 @@ Hay **4 roles reales** en la base de datos (la opción "Por defecto" del formula
 | Ver módulo Mapa GIS | ✅ | ✅ | ✅ | ✅ |
 | Ver/usar módulo Señales | ✅ | ✅ | ✅ | ❌ |
 | Ver/usar módulo Zonas | ✅ | ✅ | ❌ | ❌ |
+| Ver/usar módulo Cámaras | ✅ | ✅ | ❌ | ❌ |
 | Ver/usar módulo Inspecciones | ✅ | ✅ | ❌ | ❌ |
 | Ver/usar módulo Mantenimientos | ✅ | ✅ | ❌ | ❌ |
 | Ver módulo Reportes | ✅ | ✅ | ❌ | ❌ |
@@ -177,6 +189,8 @@ Hay **4 roles reales** en la base de datos (la opción "Por defecto" del formula
 | Carga masiva de señales (CSV/Excel) | ✅ | ✅ | ❌ | ❌ |
 | Crear/editar/eliminar zonas | ✅ | ✅ | ❌ | ❌ |
 | Carga masiva de zonas (CSV/Excel) | ✅ | ✅ | ❌ | ❌ |
+| Crear/editar/desactivar cámaras | ✅ | ✅ | ❌ | ❌ |
+| Carga masiva de cámaras (CSV/Excel) | ✅ | ✅ | ❌ | ❌ |
 | Ver "Mis asignaciones" (inspecciones/mantenimientos propios, solo lectura) | ❌ (no aplica) | ❌ (no aplica) | ✅ | ❌ |
 | Crear/editar inspecciones | ✅ | ✅ | ❌ | ❌ |
 | Crear/editar mantenimientos (descripción, costo, fecha, reasignar) | ✅ | ✅ | ❌ | ❌ |
@@ -191,8 +205,8 @@ Hay **4 roles reales** en la base de datos (la opción "Por defecto" del formula
 
 Resumen por rol:
 - **ADMIN**: acceso total. Único rol que gestiona usuarios, ve el registro de auditoría y administra el catálogo de categorías/tipos de señal.
-- **SUPERVISOR**: ve todos los módulos excepto Administración (Dashboard, Mapa GIS, Señales, Zonas, Inspecciones, Mantenimientos, Reportes). Gestiona el catálogo de señales y zonas, y puede **asignar** inspecciones/mantenimientos a técnicos vía `technician_id`/`assigned_to`. No tiene acceso a la página de Administración de usuarios (`/dashboard/admin/users`) ni a Auditoría (`/dashboard/admin/audit`), ni las ve en el sidebar — eso es exclusivo de ADMIN; el backend solo le deja consultar `/api/users` puntualmente para poblar el selector "Asignar a".
-- **TECNICO**: en el sidebar ve **Dashboard**, **Mapa GIS**, **Señales** y **Mis asignaciones** (`/dashboard/mis-asignaciones`). En Señales puede **registrar (crear) y editar** señales en campo (`POST`/`PUT /api/signals`), pero no puede desactivarlas/eliminarlas ni hacer carga masiva — eso sigue exclusivo de ADMIN/SUPERVISOR (`PATCH /toggle-active`, `DELETE`, `/bulk-import`). El flujo esperado es: TECNICO registra el inventario de señales en campo → ADMIN/SUPERVISOR asigna inspecciones/mantenimientos a los técnicos según el estado de cada señal vía `technician_id`/`assigned_to` → TECNICO consulta sus asignaciones en "Mis asignaciones" (`GET /api/inspections?technician_id=<su id>`, `GET /api/maintenances?assigned_to=<su id>`) y desde ahí **completa su propia asignación**: marca el checkbox "Tarea realizada", lo que abre un formulario obligatorio (estado, observaciones y foto de evidencia) y envía `POST /api/inspections/:id/complete` o `POST /api/maintenances/:id/complete`. Completar una inspección o un mantenimiento actualiza también el `status` de la señal asociada. No tiene acceso a Zonas ni a las páginas de gestión/creación de Inspecciones/Mantenimientos — ni en el frontend (redirige a `/dashboard` si entra por URL directa) ni en el backend (`requireRole` no incluye TECNICO en `POST`/`PUT`, solo en el `/complete` de su propia asignación, verificado por `technician_id`/`assigned_to` en el controller).
+- **SUPERVISOR**: ve todos los módulos excepto Administración (Dashboard, Mapa GIS, Señales, Zonas, Cámaras, Inspecciones, Mantenimientos, Reportes). Gestiona el catálogo de señales, zonas y cámaras, y puede **asignar** inspecciones/mantenimientos a técnicos vía `technician_id`/`assigned_to`. No tiene acceso a la página de Administración de usuarios (`/dashboard/admin/users`) ni a Auditoría (`/dashboard/admin/audit`), ni las ve en el sidebar — eso es exclusivo de ADMIN; el backend solo le deja consultar `/api/users` puntualmente para poblar el selector "Asignar a".
+- **TECNICO**: en el sidebar ve **Dashboard**, **Mapa GIS**, **Señales** y **Mis asignaciones** (`/dashboard/mis-asignaciones`). En Señales puede **registrar (crear) y editar** señales en campo (`POST`/`PUT /api/signals`), pero no puede desactivarlas/eliminarlas ni hacer carga masiva — eso sigue exclusivo de ADMIN/SUPERVISOR (`PATCH /toggle-active`, `DELETE`, `/bulk-import`). El flujo esperado es: TECNICO registra el inventario de señales en campo → ADMIN/SUPERVISOR asigna inspecciones/mantenimientos a los técnicos según el estado de cada señal vía `technician_id`/`assigned_to` → TECNICO consulta sus asignaciones en "Mis asignaciones" (`GET /api/inspections?technician_id=<su id>`, `GET /api/maintenances?assigned_to=<su id>`) y desde ahí **completa su propia asignación**: marca el checkbox "Tarea realizada", lo que abre un formulario obligatorio (estado, observaciones y foto de evidencia) y envía `POST /api/inspections/:id/complete` o `POST /api/maintenances/:id/complete`. Completar una inspección o un mantenimiento actualiza también el `status` de la señal asociada. No tiene acceso a Zonas ni a Cámaras ni a las páginas de gestión/creación de Inspecciones/Mantenimientos — ni en el frontend (redirige a `/dashboard` si entra por URL directa) ni en el backend (`requireRole` no incluye TECNICO en `POST`/`PUT`, solo en el `/complete` de su propia asignación, verificado por `technician_id`/`assigned_to` en el controller).
 - **CONSULTA**: en el sidebar solo ve **Dashboard** y **Mapa GIS** (los demás módulos —Señales, Zonas, Inspecciones, Mantenimientos, Reportes, Administración— están ocultos). Si intenta entrar por URL directa a esos módulos, el frontend lo redirige a `/dashboard`. Nota: las APIs de lectura de señales/inspecciones (`GET /api/signals`, `GET /api/inspections`) siguen abiertas a cualquier rol autenticado porque el propio Dashboard y el Mapa GIS las consumen para sus estadísticas y marcadores; lo que se restringe para CONSULTA es la navegación/página dedicada de esos módulos, no la lectura de datos que ya usa el Dashboard. Es además el rol por defecto al crear un usuario sin especificar rol.
 
 La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `backend/src/middlewares/requireRole.middleware.ts`); ese middleware también deja `req.user.roleName` cacheado para que los controladores de inspecciones/mantenimientos sepan si quien crea puede asignar a otro técnico. El frontend oculta/redirige según `user.roles.name` (de `AuthContext`) como UX, pero la autorización real siempre es la del backend.
@@ -231,6 +245,7 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 31. **`frontend/src/middleware.ts` → `proxy.ts`**: renombrado siguiendo la convención de Next.js 16 (codemod oficial `@next/codemod`), misma lógica de protección de `/dashboard/*` vía cookie `token`, solo cambia el nombre del archivo y el export (`proxy` en vez de `middleware`).
 32. **Backend en Render vía Blueprint (`render.yaml`)**: la imagen de build de Render (Node 24.x) ya trae `pnpm` preinstalado en una ruta de solo lectura — tanto `corepack enable` como `npm install -g pnpm` fallan con `EROFS`. No hace falta instalarlo: el corepack pre-activado de la imagen ya respeta `"packageManager": "pnpm@10.32.1"` del `package.json` raíz, así que `buildCommand`/`startCommand` solo usan `pnpm` directamente. El frontend se despliega aparte en Vercel (detecta Next.js automáticamente, sin config adicional en el repo).
 33. **Rebrand esmeralda → azul cívico + Tabler Icons + logo real (2026-09-24)**: el diseño original se documentó como un Design System de Claude construido a partir del código real, con una propuesta explícita de cambio en su propio README (marca a `blue`, iconos a `@tabler/icons-react`, logo real en vez de la "S" placeholder). Se aplicó ese cambio en frontend, con una regla clara: **solo la "marca" cambia de color** (botones primarios, focus de inputs, pill activo del sidebar, eyebrow/subtítulos, links de acción, tabs activos, spinners, logo) — todo lo que significa *estado/éxito* se queda en verde a propósito: badges `BUENO`/`COMPLETADO`, mensajes de éxito inline, el toggle `is_active`, el badge `CREATE` de auditoría y el badge `ASSIGNMENT` de notificaciones. El toast informativo (`ToastContext.tsx`) se movió de `blue` a `sky` porque `blue` ya es la marca. `components/Logo.tsx` es un SVG inline nuevo (sin `public/`, sin `next/image`) con el degradado `blue-400→blue-600`; el círculo de avatar del usuario (inicial del nombre) es un elemento aparte, solo se le recoloreó el degradado, no lleva el logo. Verificado en navegador (login + sidebar de escritorio, `pnpm build` limpio, sin errores de consola) contra la cuenta de prueba `sigsev.qa.test@example.com`.
+34. **Módulo `cameras` (cámaras de fotodetección fijas/móviles)**: se creó como módulo nuevo y separado de `signals` en vez de modelarlo como un `signal_type` más, porque `signals`/`signal_status` no tienen ningún campo relevante para un dispositivo (número de serie, calibración, límite de velocidad fiscalizado, tipo fijo/móvil, estado operativo) y forzarlos ahí ensuciaría un modelo que ya consumen inspecciones/mantenimientos/mapa/reportes/dashboard. Tabla `cameras` creada a mano en el SQL editor de Supabase (no versionada en migraciones, igual que el resto del esquema — ver decisiones 1/26), con dos enums de Postgres nuevos (`camera_type`: `FIJA`/`MOVIL`; `camera_status`: `EN_SERVICIO`/`FUERA_DE_SERVICIO`/`EN_MANTENIMIENTO`/`DESCALIBRADA`, mismo mecanismo `CREATE TYPE ... AS ENUM` que `signal_status`), deliberadamente separado del enum de señales. A diferencia de `zones` (hard delete), usa **soft delete** (`is_active` + `PATCH /toggle-active`) como `signals`, porque una cámara retirada temporalmente o en mantenimiento es un caso de uso frecuente y un borrado físico rompería la trazabilidad si en el futuro se referencia desde reportes. Permisos de escritura (crear/editar/desactivar/carga masiva) exclusivos de ADMIN/SUPERVISOR — igual que `zones`, sin nivel TECNICO (a diferencia de `signals`, donde TECNICO sí puede registrar en campo). El Mapa GIS (`MapView.tsx`) pasó de limpiar marcadores con `map.eachLayer(...)` global a dos `L.LayerGroup` independientes (uno por tipo de dato), cada uno con su propio `clearLayers()`, para que actualizar señales o cámaras no borre al otro tipo de marcador; un `fitBounds` combinado sobre la unión de ambos conjuntos evita que uno descentre el zoom ya ajustado por el otro. Sin integración con Inspecciones/Mantenimientos en esta primera versión.
 
 ## Lo que está implementado (completo)
 - [x] Autenticación JWT (login/register/logout)
@@ -261,6 +276,7 @@ La aplicación del lado del backend vive en `requireRole(...)` por ruta (ver `ba
 - [x] Recuperación de contraseña (`/forgot-password`, `/reset-password`): token de un solo uso hasheado con expiración de 1h, envío por email vía Resend, sin enumeración de usuarios ni exposición del token en producción (ver decisión 30)
 - [x] Build/start de producción del backend (`tsc` + `node dist/...`) y despliegue: backend en Render (`render.yaml`, Blueprint), frontend en Vercel, CI en GitHub Actions (typecheck + test + build) — ver "Despliegue y CI"
 - [x] Rebrand de marca a azul cívico + iconos `@tabler/icons-react` + logo real (`<Logo />`) en el Sidebar, preservando los colores de estado/éxito en verde (ver decisión 33)
+- [x] Módulo de cámaras de fotodetección fijas/móviles (`/dashboard/cameras`, ver decisión 34): CRUD completo + carga masiva CSV/Excel, restringido a ADMIN/SUPERVISOR (sin nivel TECNICO); marcador propio en el Mapa GIS (capa independiente, con toggle "Mostrar cámaras") y reporte dedicado en `/dashboard/reportes`
 
 ## Próximos pasos sugeridos
 - [ ] **Verificación de dominio personalizado** para el envío de correos de notificación en producción (Resend) — pendiente de retomar

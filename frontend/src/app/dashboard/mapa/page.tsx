@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { api } from '@/lib/api'
-import type { MapSignal, SignalStatus } from '@/components/MapView'
+import type { MapSignal, SignalStatus, MapCamera } from '@/components/MapView'
 import Sidebar from '@/components/Sidebar'
 import NotificationBell from '@/components/NotificationBell'
 
@@ -22,6 +22,11 @@ interface SignalsResponse {
   total: number
 }
 
+interface CamerasResponse {
+  data: MapCamera[]
+  total: number
+}
+
 interface RefItem { id: string; name: string }
 interface MunicipalityRef extends RefItem { department_id: string }
 
@@ -36,6 +41,7 @@ const STATUS_OPTIONS: { value: SignalStatus | ''; label: string; color: string }
 
 export default function MapaPage() {
   const [allSignals, setAllSignals] = useState<MapSignal[]>([])
+  const [allCameras, setAllCameras] = useState<MapCamera[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,6 +51,7 @@ export default function MapaPage() {
   const [departmentFilter, setDepartmentFilter] = useState('')
   const [municipalityFilter, setMunicipalityFilter] = useState('')
   const [zoneFilter, setZoneFilter] = useState('')
+  const [showCameras, setShowCameras] = useState(true)
 
   const [departments, setDepartments] = useState<RefItem[]>([])
   const [municipalitiesRef, setMunicipalitiesRef] = useState<MunicipalityRef[]>([])
@@ -63,6 +70,12 @@ export default function MapaPage() {
       }
     }
     fetchSignals()
+
+    // Cámaras: lectura abierta a cualquier rol autenticado, igual que señales.
+    // Si el endpoint aún no existe o falla, el mapa sigue funcionando solo con señales.
+    api.get<CamerasResponse>('/api/cameras?limit=500&is_active=true')
+      .then((res) => setAllCameras(res.data))
+      .catch(() => {})
 
     // Catálogo completo (no depende de las señales) solo para poder ubicar
     // a qué departamento pertenece cada municipio que sí tiene señales.
@@ -154,6 +167,25 @@ export default function MapaPage() {
     })
   }, [allSignals, statusFilter, departmentFilter, municipalityFilter, zoneFilter, searchText, departmentByMunicipalityId])
 
+  // Las cámaras comparten los filtros de ubicación con las señales (son
+  // transversales), pero no el filtro de estado de señal (su estado
+  // operativo es otro dominio) — solo se pueden ocultar/mostrar por completo.
+  const filteredCameras = useMemo(() => {
+    if (!showCameras) return []
+    return allCameras.filter((c) => {
+      const matchDepartment =
+        departmentFilter === '' ||
+        (c.municipalities ? departmentByMunicipalityId.get(c.municipalities.id) === departmentFilter : false)
+      const matchMunicipality = municipalityFilter === '' || c.municipalities?.id === municipalityFilter
+      const matchZone = zoneFilter === '' || c.zones?.id === zoneFilter
+      const matchSearch =
+        searchText === '' ||
+        c.camera_code.toLowerCase().includes(searchText.toLowerCase()) ||
+        (c.municipalities?.name ?? '').toLowerCase().includes(searchText.toLowerCase())
+      return matchDepartment && matchMunicipality && matchZone && matchSearch
+    })
+  }, [allCameras, showCameras, departmentFilter, municipalityFilter, zoneFilter, searchText, departmentByMunicipalityId])
+
   const countByStatus = useMemo(() => {
     return allSignals.reduce((acc, s) => {
       acc[s.status] = (acc[s.status] ?? 0) + 1
@@ -175,7 +207,11 @@ export default function MapaPage() {
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <span className="text-xs text-zinc-500 sm:text-sm">
-                {loading ? 'Cargando…' : `${filteredSignals.length} señal${filteredSignals.length !== 1 ? 'es' : ''} visibles`}
+                {loading
+                  ? 'Cargando…'
+                  : `${filteredSignals.length} señal${filteredSignals.length !== 1 ? 'es' : ''}${
+                      showCameras ? ` · ${filteredCameras.length} cámara${filteredCameras.length !== 1 ? 's' : ''}` : ''
+                    } visibles`}
               </span>
               <button
                 type="button"
@@ -299,9 +335,32 @@ export default function MapaPage() {
               </div>
             </div>
 
+            {/* Cameras layer toggle */}
+            <div className="mb-6 flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2">
+              <label htmlFor="map-show-cameras" className="text-sm font-medium text-zinc-700">
+                Mostrar cámaras
+              </label>
+              <button
+                type="button"
+                id="map-show-cameras"
+                role="switch"
+                aria-checked={showCameras}
+                onClick={() => setShowCameras((v) => !v)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  showCameras ? 'bg-blue-600' : 'bg-zinc-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    showCameras ? 'translate-x-4' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Legend */}
             <div className="border-t border-zinc-100 pt-4">
-              <p className="mb-3 text-xs font-semibold uppercase text-zinc-500">Leyenda</p>
+              <p className="mb-3 text-xs font-semibold uppercase text-zinc-500">Leyenda · Señales</p>
               <div className="space-y-2">
                 {[
                   { color: '#10b981', label: 'Bueno' },
@@ -322,6 +381,27 @@ export default function MapaPage() {
                 ))}
               </div>
             </div>
+
+            {showCameras && (
+              <div className="border-t border-zinc-100 pt-4 mt-4">
+                <p className="mb-3 text-xs font-semibold uppercase text-zinc-500">Leyenda · Cámaras</p>
+                <div className="space-y-2">
+                  {[
+                    { color: '#2563eb', label: 'En servicio' },
+                    { color: '#f43f5e', label: 'Fuera de servicio' },
+                    { color: '#f59e0b', label: 'En mantenimiento' },
+                    { color: '#8b5cf6', label: 'Descalibrada' },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 30 30">
+                        <circle cx="15" cy="15" r="14" fill={item.color} />
+                      </svg>
+                      <span className="text-sm text-zinc-600">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </aside>
 
           {/* Map */}
@@ -339,7 +419,7 @@ export default function MapaPage() {
                 </div>
               </div>
             ) : (
-              <MapView signals={filteredSignals} />
+              <MapView signals={filteredSignals} cameras={filteredCameras} />
             )}
           </div>
         </div>

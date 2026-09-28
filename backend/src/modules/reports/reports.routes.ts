@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { verifyToken } from '../../middlewares/auth.middleware'
 import { requireRole } from '../../middlewares/requireRole.middleware'
-import { signalsReport, inspectionsReport, maintenancesReport, summaryReport } from './reports.controller'
+import { signalsReport, inspectionsReport, maintenancesReport, camerasReport, summaryReport } from './reports.controller'
 
 const router = Router()
 
@@ -12,6 +12,7 @@ router.use(requireRole('ADMIN', 'SUPERVISOR'))
 router.get('/signals', signalsReport)
 router.get('/inspections', inspectionsReport)
 router.get('/maintenances', maintenancesReport)
+router.get('/cameras', camerasReport)
 router.get('/summary', summaryReport)
 
 export default router

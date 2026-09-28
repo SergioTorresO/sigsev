@@ -7,6 +7,7 @@ import {
   getSignalsReportData,
   getInspectionsReportData,
   getMaintenancesReportData,
+  getCamerasReportData,
   getSummaryReportData,
   ReportFilters,
 } from './reports.service'
@@ -126,6 +127,9 @@ export const inspectionsReport = (req: Request, res: Response) =>
 
 export const maintenancesReport = (req: Request, res: Response) =>
   sendReport(req, res, getMaintenancesReportData, 'reporte-mantenimientos', 'Mantenimientos por período')
+
+export const camerasReport = (req: Request, res: Response) =>
+  sendReport(req, res, getCamerasReportData, 'reporte-camaras', 'Cámaras por tipo y estado')
 
 export const summaryReport = (req: Request, res: Response) =>
   sendReport(req, res, getSummaryReportData, 'reporte-resumen', 'Resumen general')

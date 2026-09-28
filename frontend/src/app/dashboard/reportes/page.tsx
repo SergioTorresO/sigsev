@@ -6,22 +6,25 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
-type ReportType = 'signals' | 'inspections' | 'maintenances' | 'summary'
+type ReportType = 'signals' | 'inspections' | 'maintenances' | 'cameras' | 'summary'
 
 const REPORT_OPTIONS: { value: ReportType; label: string; description: string }[] = [
   { value: 'signals', label: 'Señales por estado', description: 'Listado de señales filtrado por estado, municipio y zona.' },
   { value: 'inspections', label: 'Inspecciones por período', description: 'Inspecciones realizadas en un rango de fechas.' },
   { value: 'maintenances', label: 'Mantenimientos por período', description: 'Mantenimientos en un rango de fechas y su estado.' },
+  { value: 'cameras', label: 'Cámaras por tipo y estado', description: 'Listado de cámaras de fotodetección filtrado por estado, municipio y zona.' },
   { value: 'summary', label: 'Resumen general', description: 'Totales consolidados de señales, inspecciones y mantenimientos.' },
 ]
 
 const SIGNAL_STATUSES = ['BUENO', 'REGULAR', 'DETERIORADO', 'CAIDO', 'DESAPARECIDO']
 const MAINTENANCE_STATUSES = ['PENDIENTE', 'EN_PROCESO', 'COMPLETADO']
+const CAMERA_STATUSES = ['EN_SERVICIO', 'FUERA_DE_SERVICIO', 'EN_MANTENIMIENTO', 'DESCALIBRADA']
 
 const REPORT_ENDPOINT: Record<ReportType, string> = {
   signals: '/api/reports/signals',
   inspections: '/api/reports/inspections',
   maintenances: '/api/reports/maintenances',
+  cameras: '/api/reports/cameras',
   summary: '/api/reports/summary',
 }
 
@@ -51,9 +54,9 @@ export default function ReportesPage() {
   const [error, setError] = useState('')
 
   const showDateFilters = reportType === 'inspections' || reportType === 'maintenances' || reportType === 'summary'
-  const showLocationFilters = reportType === 'signals' || reportType === 'inspections' || reportType === 'maintenances' || reportType === 'summary'
-  const showStatusFilter = reportType === 'signals' || reportType === 'maintenances'
-  const statusOptions = reportType === 'maintenances' ? MAINTENANCE_STATUSES : SIGNAL_STATUSES
+  const showLocationFilters = reportType === 'signals' || reportType === 'inspections' || reportType === 'maintenances' || reportType === 'cameras' || reportType === 'summary'
+  const showStatusFilter = reportType === 'signals' || reportType === 'maintenances' || reportType === 'cameras'
+  const statusOptions = reportType === 'maintenances' ? MAINTENANCE_STATUSES : reportType === 'cameras' ? CAMERA_STATUSES : SIGNAL_STATUSES
   // En el resumen general, el rango de fecha solo acota a Inspecciones y la
   // ubicación solo acota a Señales/Mantenimientos (ver nota en reports.service.ts)
   const dateFilterHint = reportType === 'summary' ? 'Aplica solo a Inspecciones' : undefined

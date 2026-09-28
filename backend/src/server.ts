@@ -21,6 +21,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes'
 import auditRoutes from './modules/audit/audit.routes'
 import zonesRoutes from './modules/zones/zones.routes'
 import catalogRoutes from './modules/catalog/catalog.routes'
+import cameraRoutes from './modules/cameras/cameras.routes'
 import { startOverdueMaintenanceJob } from './modules/maintenances/maintenances.service'
 import supabase from './lib/supabase'
 
@@ -102,6 +103,7 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/audit-logs', auditRoutes)
 app.use('/api/zones', zonesRoutes)
 app.use('/api/catalog', catalogRoutes)
+app.use('/api/cameras', cameraRoutes)
 
 app.get('/', (req, res) => {
   res.send('SIGSEV API RUNNING')

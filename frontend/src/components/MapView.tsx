@@ -27,8 +27,24 @@ export interface MapSignal {
   signal_types: { name: string; code: string | null } | null
 }
 
+export type CameraType = 'FIJA' | 'MOVIL'
+export type CameraStatus = 'EN_SERVICIO' | 'FUERA_DE_SERVICIO' | 'EN_MANTENIMIENTO' | 'DESCALIBRADA'
+
+export interface MapCamera {
+  id: string
+  camera_code: string
+  camera_type: CameraType
+  status: CameraStatus
+  speed_limit_kmh: number | null
+  latitude: number
+  longitude: number
+  municipalities: { id: string; name: string } | null
+  zones: { id: string; name: string; zone_type: string } | null
+}
+
 interface MapViewProps {
   signals: MapSignal[]
+  cameras?: MapCamera[]
   center?: [number, number]
   zoom?: number
 }
@@ -49,6 +65,27 @@ const STATUS_LABELS: Record<SignalStatus, string> = {
   DESAPARECIDO: 'Desaparecido',
 }
 
+// Paleta propia para cámaras (distinta de la de señales) para que ambos tipos
+// de marcador se distingan a simple vista en el mismo mapa.
+const CAMERA_STATUS_COLORS: Record<CameraStatus, string> = {
+  EN_SERVICIO: '#2563eb',        // blue
+  FUERA_DE_SERVICIO: '#f43f5e',  // rose
+  EN_MANTENIMIENTO: '#f59e0b',   // amber
+  DESCALIBRADA: '#8b5cf6',       // violet
+}
+
+const CAMERA_STATUS_LABELS: Record<CameraStatus, string> = {
+  EN_SERVICIO: 'En servicio',
+  FUERA_DE_SERVICIO: 'Fuera de servicio',
+  EN_MANTENIMIENTO: 'En mantenimiento',
+  DESCALIBRADA: 'Descalibrada',
+}
+
+const CAMERA_TYPE_LABELS: Record<CameraType, string> = {
+  FIJA: 'Fija',
+  MOVIL: 'Móvil',
+}
+
 function createMarkerIcon(status: SignalStatus) {
   const color = STATUS_COLORS[status]
   const svg = `
@@ -67,13 +104,37 @@ function createMarkerIcon(status: SignalStatus) {
   })
 }
 
+// Icono de cámara: cuerpo redondeado + lente, distinto a la "gota" de las
+// señales para que no se confundan a simple vista sobre el mismo mapa.
+function createCameraIcon(status: CameraStatus) {
+  const color = CAMERA_STATUS_COLORS[status]
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+      <circle cx="15" cy="15" r="14" fill="${color}" stroke="white" stroke-width="2"/>
+      <rect x="8" y="11" width="14" height="9" rx="2" fill="white"/>
+      <circle cx="15" cy="15.5" r="3.2" fill="${color}"/>
+      <rect x="18.5" y="9" width="4" height="3" rx="1" fill="white"/>
+    </svg>`
+
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -16],
+  })
+}
+
 export default function MapView({
   signals,
+  cameras = [],
   center = [5.0, -75.5], // Colombia center
   zoom = 7,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const signalsLayerRef = useRef<L.LayerGroup | null>(null)
+  const camerasLayerRef = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -89,24 +150,29 @@ export default function MapView({
       maxZoom: 19,
     }).addTo(map)
 
+    // Capas separadas para señales y cámaras: cada una se limpia y repinta de
+    // forma independiente (ver los dos useEffect de abajo), así que actualizar
+    // un tipo de dato nunca borra los marcadores del otro.
+    signalsLayerRef.current = L.layerGroup().addTo(map)
+    camerasLayerRef.current = L.layerGroup().addTo(map)
+
     mapRef.current = map
 
     return () => {
       map.remove()
       mapRef.current = null
+      signalsLayerRef.current = null
+      camerasLayerRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Update markers when signals change
+  // Repinta solo la capa de señales
   useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+    const layer = signalsLayerRef.current
+    if (!layer) return
 
-    // Clear existing markers
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker) map.removeLayer(layer)
-    })
+    layer.clearLayers()
 
     signals.forEach((signal) => {
       const marker = L.marker([signal.latitude, signal.longitude], {
@@ -139,15 +205,67 @@ export default function MapView({
         </div>
       `)
 
-      marker.addTo(map)
+      layer.addLayer(marker)
     })
-
-    // Fit bounds if there are signals
-    if (signals.length > 0) {
-      const bounds = L.latLngBounds(signals.map((s) => [s.latitude, s.longitude]))
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 })
-    }
   }, [signals])
+
+  // Repinta solo la capa de cámaras (independiente de la de señales)
+  useEffect(() => {
+    const layer = camerasLayerRef.current
+    if (!layer) return
+
+    layer.clearLayers()
+
+    cameras.forEach((camera) => {
+      const marker = L.marker([camera.latitude, camera.longitude], {
+        icon: createCameraIcon(camera.status),
+      })
+
+      marker.bindPopup(`
+        <div style="min-width:220px;font-family:system-ui,sans-serif">
+          <div style="font-weight:700;font-size:14px;margin-bottom:6px">${camera.camera_code}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <span style="
+              background:${CAMERA_STATUS_COLORS[camera.status]};
+              color:white;
+              font-size:11px;
+              font-weight:600;
+              padding:2px 8px;
+              border-radius:999px
+            ">${CAMERA_STATUS_LABELS[camera.status]}</span>
+          </div>
+          <div style="font-size:12px;color:#555;margin-bottom:4px">📷 Cámara ${CAMERA_TYPE_LABELS[camera.camera_type]}</div>
+          ${camera.speed_limit_kmh ? `<div style="font-size:12px;color:#555;margin-bottom:4px">🚦 Límite: ${camera.speed_limit_kmh} km/h</div>` : ''}
+          ${camera.municipalities ? `<div style="font-size:12px;color:#555">🏙 ${camera.municipalities.name}</div>` : ''}
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid #eee">
+            <a href="/dashboard/cameras/${camera.id}/edit"
+              style="font-size:12px;color:#2563eb;font-weight:600;text-decoration:none">
+              Ver detalle →
+            </a>
+          </div>
+        </div>
+      `)
+
+      layer.addLayer(marker)
+    })
+  }, [cameras])
+
+  // fitBounds combinado: se calcula una sola vez sobre la unión de señales y
+  // cámaras visibles, para que pintar un tipo de dato no descentre/desenfoque
+  // el zoom ya ajustado por el otro.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    const points: [number, number][] = [
+      ...signals.map((s): [number, number] => [s.latitude, s.longitude]),
+      ...cameras.map((c): [number, number] => [c.latitude, c.longitude]),
+    ]
+
+    if (points.length > 0) {
+      map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 14 })
+    }
+  }, [signals, cameras])
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 }

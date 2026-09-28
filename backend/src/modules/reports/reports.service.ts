@@ -183,6 +183,56 @@ export const getMaintenancesReportData = async (filters: ReportFilters) => {
   }))
 }
 
+// --- Cámaras por tipo/estado ---
+
+type CameraReportRow = {
+  camera_code: string
+  camera_type: string
+  status: string
+  brand: string | null
+  model: string | null
+  speed_limit_kmh: number | null
+  installation_date: string | null
+  last_calibration_date: string | null
+  is_active: boolean
+  municipalities: { name: string } | null
+  zones: { name: string } | null
+}
+
+export const getCamerasReportData = async (filters: ReportFilters) => {
+  const buildQuery = () => {
+    let query = supabase
+      .from('cameras')
+      .select(`
+        camera_code, camera_type, status, brand, model, speed_limit_kmh,
+        installation_date, last_calibration_date, is_active,
+        municipalities(name), zones(name)
+      `)
+      .order('camera_code', { ascending: true })
+
+    if (filters.municipality_id) query = query.eq('municipality_id', filters.municipality_id)
+    if (filters.zone_id) query = query.eq('zone_id', filters.zone_id)
+    if (filters.status) query = query.eq('status', filters.status)
+
+    return query
+  }
+
+  const data = await fetchAllRows<unknown>(buildQuery as () => Rangeable<unknown>)
+
+  return (data as CameraReportRow[]).map((c) => ({
+    'Código': c.camera_code,
+    'Tipo': c.camera_type,
+    'Estado': c.status,
+    'Municipio': (c.municipalities as unknown as { name: string } | null)?.name ?? '',
+    'Zona': (c.zones as unknown as { name: string } | null)?.name ?? '',
+    'Límite (km/h)': c.speed_limit_kmh ?? '',
+    'Marca/Modelo': [c.brand, c.model].filter(Boolean).join(' / '),
+    'Fecha instalación': c.installation_date ?? '',
+    'Última calibración': c.last_calibration_date ?? '',
+    'Activa': c.is_active ? 'Sí' : 'No',
+  }))
+}
+
 // --- Resumen general (consolidado para el dashboard de reportes) ---
 //
 // Nota de diseño: señales y mantenimientos son totales de estado actual, así

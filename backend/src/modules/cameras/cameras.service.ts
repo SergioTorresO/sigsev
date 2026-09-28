@@ -1,9 +1,36 @@
 import supabase from '../../lib/supabase'
 import { z } from 'zod'
 import { BulkImportError, BulkImportRowError, normalizeHeader, rawToText } from '../../lib/bulkImport'
+import { logAudit } from '../../lib/audit'
+import logger from '../../lib/logger'
 
 const CAMERA_TYPES = ['FIJA', 'MOVIL'] as const
 const CAMERA_STATUSES = ['EN_SERVICIO', 'FUERA_DE_SERVICIO', 'EN_MANTENIMIENTO', 'DESCALIBRADA'] as const
+
+// --- Categorización automática por vigencia de calibración ---
+//
+// Una cámara de fotodetección debe recalibrarse cada año. `calibration_overdue`
+// es un campo calculado (no una columna) que se agrega en JS a cada fila leída,
+// para que el frontend pueda mostrar la advertencia incluso si el status
+// manual no es DESCALIBRADA (p.ej. está FUERA_DE_SERVICIO por otra razón pero
+// además tiene la calibración vencida). Cámaras sin `last_calibration_date`
+// nunca se marcan como vencidas automáticamente: no hay fecha con la cual
+// calcular el vencimiento, así que se deja en manos del registro manual.
+const CALIBRATION_VALIDITY_DAYS = 365
+
+const isCalibrationOverdue = (dateStr?: string | null): boolean => {
+  if (!dateStr) return false
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return false
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - CALIBRATION_VALIDITY_DAYS)
+  return date < cutoff
+}
+
+const withCalibrationOverdue = <T extends { last_calibration_date?: string | null }>(camera: T) => ({
+  ...camera,
+  calibration_overdue: isCalibrationOverdue(camera.last_calibration_date),
+})
 
 export const createCameraSchema = z.object({
   camera_code: z.string().trim().min(1, 'Código requerido'),
@@ -49,7 +76,7 @@ const CAMERA_SELECT = `
   id, camera_code, camera_type, status, serial_number, brand, model,
   installation_date, last_calibration_date, speed_limit_kmh, lane_direction,
   radar_code, operator_entity, address, description, observations, image_url,
-  latitude, longitude, is_active, created_at, updated_at,
+  calibration_certificate_url, latitude, longitude, is_active, created_at, updated_at,
   municipalities(id, name),
   zones(id, name, zone_type),
   users(id, full_name)
@@ -81,7 +108,7 @@ export const getCameras = async (filters: CameraFilters) => {
   const { data, error, count } = await query
   if (error) throw new Error(error.message)
 
-  return { data: data ?? [], total: count ?? 0, page, limit }
+  return { data: (data ?? []).map(withCalibrationOverdue), total: count ?? 0, page, limit }
 }
 
 export const getCameraById = async (id: string) => {
@@ -93,7 +120,7 @@ export const getCameraById = async (id: string) => {
 
   if (error) throw new Error(error.message)
   if (!data) throw new Error('Cámara no encontrada')
-  return data
+  return withCalibrationOverdue(data)
 }
 
 export const createCamera = async (data: CreateCameraDTO, installedBy: string) => {
@@ -101,28 +128,53 @@ export const createCamera = async (data: CreateCameraDTO, installedBy: string) =
     .from('cameras').select('id').eq('camera_code', data.camera_code).maybeSingle()
   if (existing) throw new Error('Ya existe una cámara con ese código')
 
+  // Categorización automática al registrar: si la fecha de última
+  // calibración ya venció y no se eligió explícitamente otro estado, se
+  // guarda directamente como DESCALIBRADA en vez de esperar la siguiente
+  // corrida del job periódico (ver checkCameraCalibrations más abajo).
+  const insertData: CreateCameraDTO = { ...data }
+  if (isCalibrationOverdue(data.last_calibration_date) && (data.status === undefined || data.status === 'EN_SERVICIO')) {
+    insertData.status = 'DESCALIBRADA'
+  }
+
   const { data: camera, error } = await supabase
     .from('cameras')
-    .insert({ ...data, installed_by: installedBy })
+    .insert({ ...insertData, installed_by: installedBy })
     .select(CAMERA_SELECT)
     .single()
 
   if (error) throw new Error(error.message)
-  return camera
+  return withCalibrationOverdue(camera)
 }
 
 export const updateCamera = async (id: string, data: UpdateCameraDTO) => {
-  await getCameraById(id)
+  const existing = await getCameraById(id)
+
+  // Misma categorización automática que createCamera, en ambos sentidos:
+  // - si la fecha (nueva o la que ya tenía) está vencida y el estado
+  //   resultante sería EN_SERVICIO (explícito o heredado), pasa a DESCALIBRADA.
+  // - si se acaba de recalibrar (fecha ya no vencida) y el estado seguía en
+  //   DESCALIBRADA sin que el usuario haya elegido otro manualmente, vuelve a
+  //   EN_SERVICIO — recalibrar es justamente lo que limpia esa marca.
+  const payload: UpdateCameraDTO = { ...data }
+  const nextCalibrationDate = data.last_calibration_date !== undefined ? data.last_calibration_date : existing.last_calibration_date
+  const overdue = isCalibrationOverdue(nextCalibrationDate)
+
+  if (overdue && (data.status === undefined ? existing.status === 'EN_SERVICIO' : data.status === 'EN_SERVICIO')) {
+    payload.status = 'DESCALIBRADA'
+  } else if (!overdue && existing.status === 'DESCALIBRADA' && (data.status === undefined || data.status === 'DESCALIBRADA')) {
+    payload.status = 'EN_SERVICIO'
+  }
 
   const { data: camera, error } = await supabase
     .from('cameras')
-    .update({ ...data, updated_at: new Date().toISOString() })
+    .update({ ...payload, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select(CAMERA_SELECT)
     .single()
 
   if (error) throw new Error(error.message)
-  return camera
+  return withCalibrationOverdue(camera)
 }
 
 // Soft delete (igual que signals): una cámara retirada temporalmente o en
@@ -140,6 +192,22 @@ export const deleteCamera = async (id: string) => {
   return { message: 'Cámara desactivada' }
 }
 
+// Se actualiza por separado del PUT genérico porque llega vía multipart/form-data
+// (certificateUpload en la ruta dedicada), no como parte del JSON de create/update.
+export const updateCameraCertificate = async (id: string, url: string) => {
+  await getCameraById(id)
+
+  const { data, error } = await supabase
+    .from('cameras')
+    .update({ calibration_certificate_url: url, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(CAMERA_SELECT)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return withCalibrationOverdue(data)
+}
+
 export const toggleCameraActive = async (id: string) => {
   const camera = await getCameraById(id)
   const newStatus = !camera.is_active
@@ -152,7 +220,7 @@ export const toggleCameraActive = async (id: string) => {
     .single()
 
   if (error) throw new Error(error.message)
-  return data
+  return withCalibrationOverdue(data)
 }
 
 // --- Carga masiva (CSV/Excel) ---
@@ -344,6 +412,13 @@ export const bulkImportCameras = async (
       status = upper
     }
 
+    // Misma categorización automática que createCamera/updateCamera: una fila
+    // sin estado explícito (o con EN_SERVICIO) pero con calibración ya vencida
+    // entra directamente como DESCALIBRADA.
+    if (status === 'EN_SERVICIO' && isCalibrationOverdue(data.last_calibration_date || null)) {
+      status = 'DESCALIBRADA'
+    }
+
     if (Number.isNaN(data.latitude) || Number.isNaN(data.longitude)) {
       errors.push({ row: rowNumber, message: 'Latitud/longitud inválida' })
       return
@@ -399,4 +474,62 @@ export const bulkImportCameras = async (
   if (error) throw new Error(error.message)
 
   return { inserted: inserted?.length ?? 0 }
+}
+
+// --- Job periódico: cámaras que vencen su calibración sin que nadie las edite ---
+//
+// createCamera/updateCamera/bulkImportCameras ya categorizan automáticamente
+// en el momento en que se crea o edita una cámara, pero una cámara que se
+// deja quieta (nadie la toca) igual debe pasar a DESCALIBRADA el día que se
+// cumple el año desde su última calibración. Solo se tocan cámaras activas
+// que siguen en EN_SERVICIO — si ya están en FUERA_DE_SERVICIO o
+// EN_MANTENIMIENTO se respeta esa decisión manual en vez de pisarla.
+// Mismo patrón de setInterval en proceso que startOverdueMaintenanceJob
+// (maintenances.service.ts): no hay cron nativo en este Express plano y
+// basta a esta escala (un solo servidor, sin múltiples instancias).
+const CALIBRATION_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000 // cada 6 horas
+
+export const checkCameraCalibrations = async () => {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - CALIBRATION_VALIDITY_DAYS)
+  const cutoffIso = cutoff.toISOString().slice(0, 10)
+
+  const { data, error } = await supabase
+    .from('cameras')
+    .select('id')
+    .eq('is_active', true)
+    .eq('status', 'EN_SERVICIO')
+    .lt('last_calibration_date', cutoffIso)
+
+  if (error) {
+    logger.error({ err: error, module: 'cameras' }, 'error revisando calibración de cámaras')
+    return
+  }
+
+  for (const cam of data ?? []) {
+    try {
+      const { error: updateError } = await supabase
+        .from('cameras')
+        .update({ status: 'DESCALIBRADA', updated_at: new Date().toISOString() })
+        .eq('id', cam.id)
+
+      if (updateError) throw new Error(updateError.message)
+
+      void logAudit({
+        userId: null,
+        action: 'UPDATE',
+        tableName: 'cameras',
+        recordId: cam.id as string,
+        oldData: { status: 'EN_SERVICIO' },
+        newData: { status: 'DESCALIBRADA', reason: 'calibración vencida (automático)' },
+      })
+    } catch (err) {
+      logger.error({ err, module: 'cameras', cameraId: cam.id }, 'error marcando cámara como descalibrada')
+    }
+  }
+}
+
+export const startCameraCalibrationJob = () => {
+  setTimeout(() => void checkCameraCalibrations(), 45 * 1000)
+  setInterval(() => void checkCameraCalibrations(), CALIBRATION_CHECK_INTERVAL_MS)
 }

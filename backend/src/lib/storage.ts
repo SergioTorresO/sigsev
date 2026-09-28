@@ -24,3 +24,24 @@ export const uploadEvidenceImage = async (file: Express.Multer.File, pathPrefix:
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
   return data.publicUrl
 }
+
+/**
+ * Sube el certificado de calibración de una cámara (PDF o imagen) al mismo
+ * bucket público "evidences" (bajo el prefijo camera-certificates/) y
+ * devuelve la URL pública para guardarla en `cameras.calibration_certificate_url`.
+ * Reutiliza el bucket existente en vez de crear uno nuevo en Supabase Storage.
+ */
+export const uploadCameraCertificate = async (file: Express.Multer.File, pathPrefix: string): Promise<string> => {
+  const ext = (file.originalname.split('.').pop() || 'pdf').toLowerCase()
+  const path = `${pathPrefix}/${randomUUID()}.${ext}`
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file.buffer, {
+    contentType: file.mimetype,
+    upsert: false,
+  })
+
+  if (error) throw new Error(`Error subiendo certificado: ${error.message}`)
+
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return data.publicUrl
+}

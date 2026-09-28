@@ -19,6 +19,8 @@ interface Camera {
   status: CameraStatus
   speed_limit_kmh: number | null
   is_active: boolean
+  calibration_certificate_url: string | null
+  calibration_overdue: boolean
   municipalities: { name: string } | null
   zones: { name: string } | null
 }
@@ -315,9 +317,19 @@ export default function CamerasPage() {
                       {camera.speed_limit_kmh ?? '—'}
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_COLORS[camera.status]}`}>
-                        {STATUS_LABELS[camera.status]}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_COLORS[camera.status]}`}>
+                          {STATUS_LABELS[camera.status]}
+                        </span>
+                        {camera.calibration_overdue && camera.status !== 'DESCALIBRADA' && (
+                          <span
+                            title="La última calibración registrada superó el año de vigencia"
+                            className="rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-700"
+                          >
+                            Calibración vencida
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       <button
@@ -339,12 +351,24 @@ export default function CamerasPage() {
                       </button>
                     </td>
                     <td className="px-5 py-4">
-                      <button
-                        onClick={() => router.push(`/dashboard/cameras/${camera.id}/edit`)}
-                        className="text-zinc-600 hover:underline text-xs font-medium"
-                      >
-                        Editar
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => router.push(`/dashboard/cameras/${camera.id}/edit`)}
+                          className="text-zinc-600 hover:underline text-xs font-medium"
+                        >
+                          Editar
+                        </button>
+                        {camera.calibration_certificate_url && (
+                          <a
+                            href={camera.calibration_certificate_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline text-xs font-medium"
+                          >
+                            Certificado
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

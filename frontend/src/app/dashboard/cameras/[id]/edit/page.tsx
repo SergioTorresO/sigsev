@@ -5,19 +5,37 @@ import { useRouter, useParams } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface RefItem { id: string; name: string }
+
+// Mismo umbral que el backend (cameras.service.ts, CALIBRATION_VALIDITY_DAYS):
+// una cámara debe recalibrarse cada año. Aviso puramente informativo en el
+// formulario — quien categoriza de verdad como DESCALIBRADA es el backend.
+const isCalibrationOverdue = (dateStr: string) => {
+  if (!dateStr) return false
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return false
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 365)
+  return date < cutoff
+}
 
 export default function EditCameraPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
   const { user } = useAuth()
+  const toast = useToast()
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState('')
+
+  const [certificateUrl, setCertificateUrl] = useState<string | null>(null)
+  const [certificateFile, setCertificateFile] = useState<File | null>(null)
+  const [uploadingCertificate, setUploadingCertificate] = useState(false)
 
   useEffect(() => {
     if (user && !canWrite) router.replace('/dashboard/cameras')
@@ -85,6 +103,7 @@ export default function EditCameraPage() {
         latitude: String(camera.latitude ?? ''),
         longitude: String(camera.longitude ?? ''),
       })
+      setCertificateUrl((camera.calibration_certificate_url as string) ?? null)
     }).finally(() => setFetching(false))
   }, [id])
 
@@ -102,6 +121,26 @@ export default function EditCameraPage() {
 
   const set = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }))
+
+  const handleUploadCertificate = async () => {
+    if (!certificateFile) return
+    setUploadingCertificate(true)
+    try {
+      const formData = new FormData()
+      formData.append('certificate', certificateFile)
+      const camera = await api.postForm<{ calibration_certificate_url: string }>(
+        `/api/cameras/${id}/certificate`,
+        formData
+      )
+      setCertificateUrl(camera.calibration_certificate_url)
+      setCertificateFile(null)
+      toast.success('Certificado subido correctamente')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al subir el certificado')
+    } finally {
+      setUploadingCertificate(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -283,6 +322,11 @@ export default function EditCameraPage() {
               <label htmlFor="camera-calibration-date" className="mb-1 block text-sm font-medium text-zinc-700">Última calibración</label>
               <input id="camera-calibration-date" type="date" value={form.last_calibration_date} onChange={(e) => set('last_calibration_date', e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+              {isCalibrationOverdue(form.last_calibration_date) && (
+                <p className="mt-1 text-xs text-orange-600">
+                  Supera el año de vigencia: al guardar, el sistema la categorizará como &quot;Descalibrada&quot; automáticamente (a menos que elijas otro estado manualmente).
+                </p>
+              )}
             </div>
           </div>
 
@@ -313,6 +357,40 @@ export default function EditCameraPage() {
             </a>
           </div>
         </form>
+
+        <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-zinc-900">Certificado de calibración</h2>
+          <p className="mb-4 text-xs text-zinc-500">PDF, JPG, PNG o WEBP, máx. 10MB.</p>
+
+          {certificateUrl && (
+            <a
+              href={certificateUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-4 inline-block text-sm font-medium text-blue-600 hover:underline"
+            >
+              Ver certificado actual ↗
+            </a>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="file"
+              aria-label="Certificado de calibración"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              onChange={(e) => setCertificateFile(e.target.files?.[0] ?? null)}
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200"
+            />
+            <button
+              type="button"
+              onClick={handleUploadCertificate}
+              disabled={!certificateFile || uploadingCertificate}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {uploadingCertificate ? 'Subiendo…' : certificateUrl ? 'Reemplazar certificado' : 'Subir certificado'}
+            </button>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )

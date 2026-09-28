@@ -23,6 +23,7 @@ import zonesRoutes from './modules/zones/zones.routes'
 import catalogRoutes from './modules/catalog/catalog.routes'
 import cameraRoutes from './modules/cameras/cameras.routes'
 import { startOverdueMaintenanceJob } from './modules/maintenances/maintenances.service'
+import { startCameraCalibrationJob } from './modules/cameras/cameras.service'
 import supabase from './lib/supabase'
 
 const app = express()
@@ -151,6 +152,9 @@ const server = app.listen(PORT, () => {
   // No hay cron nativo en este setup; un intervalo en proceso es suficiente
   // a esta escala (un solo servidor, sin múltiples instancias).
   startOverdueMaintenanceJob()
+  // Revisión periódica de cámaras cuya calibración venció sin que nadie las
+  // haya editado (ver checkCameraCalibrations en cameras.service.ts).
+  startCameraCalibrationJob()
 })
 
 // Graceful shutdown: al desplegar (o al reiniciar el proceso), Vercel/el

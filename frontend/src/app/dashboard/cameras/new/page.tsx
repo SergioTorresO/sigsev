@@ -5,15 +5,30 @@ import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/DashboardLayout'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 interface RefItem { id: string; name: string }
+
+// Mismo umbral que el backend (cameras.service.ts, CALIBRATION_VALIDITY_DAYS):
+// una cámara debe recalibrarse cada año. Aviso puramente informativo en el
+// formulario — quien categoriza de verdad como DESCALIBRADA es el backend.
+const isCalibrationOverdue = (dateStr: string) => {
+  if (!dateStr) return false
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return false
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 365)
+  return date < cutoff
+}
 
 export default function NewCameraPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const toast = useToast()
   const canWrite = user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [certificateFile, setCertificateFile] = useState<File | null>(null)
 
   useEffect(() => {
     if (user && !canWrite) router.replace('/dashboard/cameras')
@@ -72,7 +87,7 @@ export default function NewCameraPage() {
 
     try {
       const { department_id: _department_id, ...rest } = form
-      await api.post('/api/cameras', {
+      const camera = await api.post<{ id: string }>('/api/cameras', {
         ...rest,
         latitude: parseFloat(form.latitude),
         longitude: parseFloat(form.longitude),
@@ -82,6 +97,21 @@ export default function NewCameraPage() {
         installation_date: form.installation_date || undefined,
         last_calibration_date: form.last_calibration_date || undefined,
       })
+
+      if (certificateFile) {
+        try {
+          const formData = new FormData()
+          formData.append('certificate', certificateFile)
+          await api.postForm(`/api/cameras/${camera.id}/certificate`, formData)
+        } catch (certErr) {
+          toast.error(
+            certErr instanceof Error
+              ? `Cámara creada, pero falló el certificado: ${certErr.message}`
+              : 'Cámara creada, pero falló la subida del certificado'
+          )
+        }
+      }
+
       router.push('/dashboard/cameras')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear cámara')
@@ -245,6 +275,23 @@ export default function NewCameraPage() {
               <label htmlFor="camera-calibration-date" className="mb-1 block text-sm font-medium text-zinc-700">Última calibración</label>
               <input id="camera-calibration-date" type="date" value={form.last_calibration_date} onChange={(e) => set('last_calibration_date', e.target.value)}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+              {isCalibrationOverdue(form.last_calibration_date) && (
+                <p className="mt-1 text-xs text-orange-600">
+                  Supera el año de vigencia: al guardar, el sistema la categorizará como &quot;Descalibrada&quot; automáticamente.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="camera-certificate" className="mb-1 block text-sm font-medium text-zinc-700">Certificado de calibración</label>
+              <input
+                id="camera-certificate"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                onChange={(e) => setCertificateFile(e.target.files?.[0] ?? null)}
+                className="w-full rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 focus:border-blue-500 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-zinc-400">PDF, JPG, PNG o WEBP, máx. 10MB. Opcional.</p>
             </div>
           </div>
 

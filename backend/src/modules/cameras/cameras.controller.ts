@@ -7,6 +7,7 @@ import {
   updateCamera,
   deleteCamera,
   toggleCameraActive,
+  updateCameraCertificate,
   bulkImportCameras,
   createCameraSchema,
   updateCameraSchema,
@@ -14,6 +15,7 @@ import {
 } from './cameras.service'
 import { logAudit } from '../../lib/audit'
 import { BulkImportError, createBulkImportUpload, parseSpreadsheetRows } from '../../lib/bulkImport'
+import { uploadCameraCertificate } from '../../lib/storage'
 
 // Middleware de multer compartido (ver lib/bulkImport.ts): memoria, máx. 5MB,
 // solo .csv/.xlsx/.xls.
@@ -97,6 +99,26 @@ export const toggleActive = async (req: Request, res: Response) => {
     const previous = await getCameraById(req.params.id as string).catch(() => null)
     const camera = await toggleCameraActive(req.params.id as string)
     void logAudit({ userId: req.user!.userId, action: 'TOGGLE_ACTIVE', tableName: 'cameras', recordId: camera.id, oldData: previous, newData: camera })
+    return res.json(camera)
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Cámara no encontrada') {
+      return res.status(404).json({ message: error.message })
+    }
+    return handleError(res, error)
+  }
+}
+
+export const uploadCertificate = async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Debes adjuntar un archivo PDF o imagen' })
+    }
+
+    const id = req.params.id as string
+    const previous = await getCameraById(id).catch(() => null)
+    const url = await uploadCameraCertificate(req.file, `camera-certificates/${id}`)
+    const camera = await updateCameraCertificate(id, url)
+    void logAudit({ userId: req.user!.userId, action: 'UPDATE', tableName: 'cameras', recordId: id, oldData: previous, newData: camera })
     return res.json(camera)
   } catch (error) {
     if (error instanceof Error && error.message === 'Cámara no encontrada') {

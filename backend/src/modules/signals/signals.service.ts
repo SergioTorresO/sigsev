@@ -43,10 +43,17 @@ type CreateSignalDTO = z.infer<typeof createSignalSchema>
 type UpdateSignalDTO = z.infer<typeof updateSignalSchema>
 type SignalFilters = z.infer<typeof signalFiltersSchema>
 
+// category_id/signal_type_id/municipality_id/zone_id van explícitos además del
+// join embebido (signal_categories(...), etc.): PostgREST solo expone el FK
+// crudo si se pide por su nombre de columna — sin esto, GET /api/signals/:id
+// nunca traía esos IDs y el formulario de edición no podía preseleccionar
+// categoría/tipo/departamento/municipio/zona (mismo patrón que ya usa
+// ZONE_SELECT en zones.service.ts).
 const SIGNAL_SELECT = `
   id, signal_code, address, status, description, observations,
   installation_date, last_maintenance_date, image_url, latitude, longitude,
   is_active, created_at, updated_at,
+  category_id, signal_type_id, municipality_id, zone_id,
   signal_categories(id, name),
   signal_types(id, name, code),
   municipalities(id, name),

@@ -72,11 +72,18 @@ type CreateCameraDTO = z.infer<typeof createCameraSchema>
 type UpdateCameraDTO = z.infer<typeof updateCameraSchema>
 type CameraFilters = z.infer<typeof cameraFiltersSchema>
 
+// municipality_id/zone_id van explícitos además del join embebido
+// (municipalities(...), zones(...)): PostgREST solo expone el FK crudo si se
+// pide por su nombre de columna, y el formulario de edición del frontend
+// necesita ese valor plano para preseleccionar Departamento/Municipio/Zona
+// (mismo patrón que ZONE_SELECT en zones.service.ts; bug equivalente
+// corregido a la vez en SIGNAL_SELECT).
 const CAMERA_SELECT = `
   id, camera_code, camera_type, status, serial_number, brand, model,
   installation_date, last_calibration_date, speed_limit_kmh, lane_direction,
   radar_code, operator_entity, address, description, observations, image_url,
   calibration_certificate_url, latitude, longitude, is_active, created_at, updated_at,
+  municipality_id, zone_id,
   municipalities(id, name),
   zones(id, name, zone_type),
   users(id, full_name)

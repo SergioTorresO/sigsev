@@ -5,6 +5,16 @@ import {
   PieChart, Pie, Cell, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
+import {
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconAlertCircle,
+  IconClipboardCheck,
+  IconCamera,
+  IconRefresh,
+  IconPlus,
+  type Icon as TablerIcon,
+} from '@tabler/icons-react'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import DashboardLayout from '@/components/DashboardLayout'
@@ -41,8 +51,15 @@ interface InspectionsResponse {
   total: number
 }
 
+interface CamerasResponse {
+  total: number
+}
+
+type CameraStatus = 'EN_SERVICIO' | 'FUERA_DE_SERVICIO' | 'EN_MANTENIMIENTO' | 'DESCALIBRADA'
+
 interface DashboardStats {
   signalsByStatus: Record<string, number>
+  camerasByStatus: Record<CameraStatus, number>
   inspectionsByMonth: { month: string; count: number }[]
 }
 
@@ -72,12 +89,29 @@ const STATUS_HEX: Record<string, string> = {
   DESAPARECIDO: '#a1a1aa',
 }
 
+// Mismos colores usados en la leyenda de cámaras del Mapa GIS (MapView.tsx) —
+// para que un mismo estado se lea con el mismo color en todo el dashboard.
+const CAMERA_STATUS_COLORS: Record<CameraStatus, string> = {
+  EN_SERVICIO: 'bg-blue-600',
+  FUERA_DE_SERVICIO: 'bg-rose-500',
+  EN_MANTENIMIENTO: 'bg-amber-500',
+  DESCALIBRADA: 'bg-violet-500',
+}
+
+const CAMERA_STATUS_LABELS: Record<CameraStatus, string> = {
+  EN_SERVICIO: 'En servicio',
+  FUERA_DE_SERVICIO: 'Fuera de servicio',
+  EN_MANTENIMIENTO: 'En mantenimiento',
+  DESCALIBRADA: 'Descalibrada',
+}
+
 // --- Component ---
 export default function DashboardPage() {
   const { user, isLoading } = useAuth()
 
   const [signals, setSignals] = useState<SignalsResponse | null>(null)
   const [inspections, setInspections] = useState<InspectionsResponse | null>(null)
+  const [cameras, setCameras] = useState<CamerasResponse | null>(null)
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -87,14 +121,16 @@ export default function DashboardPage() {
       setLoadingData(true)
       setError(null)
 
-      const [signalsData, inspectionsData, statsData] = await Promise.all([
+      const [signalsData, inspectionsData, camerasData, statsData] = await Promise.all([
         api.get<SignalsResponse>('/api/signals?limit=100'),
         api.get<InspectionsResponse>('/api/inspections?limit=5'),
+        api.get<CamerasResponse>('/api/cameras?limit=1&is_active=true'),
         api.get<DashboardStats>('/api/dashboard/stats'),
       ])
 
       setSignals(signalsData)
       setInspections(inspectionsData)
+      setCameras(camerasData)
       setDashboardStats(statsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar datos')
@@ -110,6 +146,7 @@ export default function DashboardPage() {
   // Conteos por estado: usamos /api/dashboard/stats (cubre todo el inventario,
   // no solo los primeros 100 registros que trae /api/signals para la tabla).
   const statusCounts = dashboardStats?.signalsByStatus ?? {}
+  const cameraStatusCounts = dashboardStats?.camerasByStatus ?? ({} as Record<CameraStatus, number>)
 
   const total = signals?.total ?? 0
   const bueno = statusCounts['BUENO'] ?? 0
@@ -117,27 +154,49 @@ export default function DashboardPage() {
     (statusCounts['DETERIORADO'] ?? 0) +
     (statusCounts['CAIDO'] ?? 0) +
     (statusCounts['DESAPARECIDO'] ?? 0)
+  const camerasTotal = cameras?.total ?? 0
 
-  const stats = [
+  const stats: {
+    label: string
+    value: string
+    detail: string
+    icon: TablerIcon
+    iconClass: string
+  }[] = [
     {
       label: 'Señales registradas',
       value: total.toLocaleString('es-CO'),
       detail: 'Total en inventario',
+      icon: IconAlertTriangle,
+      iconClass: 'bg-blue-100 text-blue-600',
     },
     {
       label: 'En buen estado',
       value: bueno.toLocaleString('es-CO'),
       detail: total > 0 ? `${Math.round((bueno / total) * 100)}% del inventario` : '—',
+      icon: IconCircleCheck,
+      iconClass: 'bg-emerald-100 text-emerald-600',
     },
     {
       label: 'Requieren atención',
       value: requierenAtencion.toLocaleString('es-CO'),
       detail: 'Deterioradas, caídas o desaparecidas',
+      icon: IconAlertCircle,
+      iconClass: 'bg-rose-100 text-rose-600',
     },
     {
       label: 'Inspecciones totales',
       value: (inspections?.total ?? 0).toLocaleString('es-CO'),
       detail: 'Registradas en el sistema',
+      icon: IconClipboardCheck,
+      iconClass: 'bg-sky-100 text-sky-600',
+    },
+    {
+      label: 'Cámaras registradas',
+      value: camerasTotal.toLocaleString('es-CO'),
+      detail: 'Fotodetección activa',
+      icon: IconCamera,
+      iconClass: 'bg-violet-100 text-violet-600',
     },
   ]
 
@@ -147,6 +206,12 @@ export default function DashboardPage() {
     { label: 'Deteriorado', count: statusCounts['DETERIORADO'] ?? 0, color: 'bg-orange-500' },
     { label: 'Caído / Desaparecido', count: (statusCounts['CAIDO'] ?? 0) + (statusCounts['DESAPARECIDO'] ?? 0), color: 'bg-rose-500' },
   ]
+
+  const cameraStatusList = (Object.keys(CAMERA_STATUS_LABELS) as CameraStatus[]).map((status) => ({
+    label: CAMERA_STATUS_LABELS[status],
+    count: cameraStatusCounts[status] ?? 0,
+    color: CAMERA_STATUS_COLORS[status],
+  }))
 
   const pieData = Object.entries(statusCounts)
     .filter(([, count]) => count > 0)
@@ -166,15 +231,17 @@ export default function DashboardPage() {
         <>
           <button
             onClick={fetchDashboardData}
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-100"
+            className="flex items-center gap-1.5 rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 hover:bg-zinc-100"
           >
+            <IconRefresh size={16} className={loadingData ? 'animate-spin' : ''} />
             Actualizar
           </button>
           {(user?.roles?.name === 'ADMIN' || user?.roles?.name === 'SUPERVISOR') && (
             <a
               href="/dashboard/signals/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
+              <IconPlus size={16} />
               Nueva señal
             </a>
           )}
@@ -194,17 +261,20 @@ export default function DashboardPage() {
           )}
 
           {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {stats.map((stat) => (
               <article
                 key={stat.label}
                 className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
               >
-                <p className="text-sm font-medium text-zinc-500">{stat.label}</p>
+                <div className={`inline-flex rounded-lg p-2 ${stat.iconClass}`}>
+                  <stat.icon size={20} />
+                </div>
+                <p className="mt-3 text-sm font-medium text-zinc-500">{stat.label}</p>
                 {loadingData ? (
-                  <div className="mt-3 h-8 w-20 animate-pulse rounded bg-zinc-100" />
+                  <div className="mt-2 h-8 w-20 animate-pulse rounded bg-zinc-100" />
                 ) : (
-                  <p className="mt-3 text-3xl font-bold text-zinc-950">{stat.value}</p>
+                  <p className="mt-1 text-3xl font-bold text-zinc-950">{stat.value}</p>
                 )}
                 <p className="mt-2 text-sm text-zinc-600">{stat.detail}</p>
               </article>
@@ -334,15 +404,38 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              <div className="mt-6 rounded-lg bg-zinc-950 p-4 text-white">
-                <p className="text-sm font-semibold text-blue-300">
-                  Bienvenido, {user?.full_name?.split(' ')[0]}
-                </p>
-                <p className="mt-2 text-sm text-zinc-200">
-                  Sesión activa como{' '}
-                  <span className="font-semibold">{user?.roles?.name ?? 'usuario'}</span>.
-                  Los datos se cargan en tiempo real desde la base de datos.
-                </p>
+              {/* Cámaras por estado */}
+              <div className="mt-6 border-t border-zinc-100 pt-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
+                    <IconCamera size={16} className="text-violet-600" />
+                    Cámaras por estado
+                  </h4>
+                  <span className="text-sm text-zinc-500">
+                    {loadingData ? '—' : camerasTotal.toLocaleString('es-CO')}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {cameraStatusList.map((item) => {
+                    const pct = camerasTotal > 0 ? Math.round((item.count / camerasTotal) * 100) : 0
+                    return (
+                      <div key={item.label}>
+                        <div className="mb-1.5 flex items-center justify-between text-xs">
+                          <span className="font-medium text-zinc-600">{item.label}</span>
+                          <span className="text-zinc-400">
+                            {loadingData ? '—' : `${pct}% (${item.count})`}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-zinc-100">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${item.color}`}
+                            style={{ width: loadingData ? '0%' : `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </section>
           </div>

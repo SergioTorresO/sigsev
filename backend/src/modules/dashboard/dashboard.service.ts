@@ -1,6 +1,7 @@
 import supabase from '../../lib/supabase'
 
 const SIGNAL_STATUSES = ['BUENO', 'REGULAR', 'DETERIORADO', 'CAIDO', 'DESAPARECIDO'] as const
+const CAMERA_STATUSES = ['EN_SERVICIO', 'FUERA_DE_SERVICIO', 'EN_MANTENIMIENTO', 'DESCALIBRADA'] as const
 
 // --- Señales por estado ---
 //
@@ -28,6 +29,29 @@ export const getSignalsByStatus = async () => {
   results.forEach((res, i) => {
     if (res.error) throw new Error(res.error.message)
     if (res.count) counts[SIGNAL_STATUSES[i]] = res.count
+  })
+  return counts
+}
+
+// --- Cámaras por estado operativo ---
+//
+// Mismo patrón que getSignalsByStatus: count exacto por estado (head: true,
+// sin descargar filas), solo cámaras activas (is_active = true).
+export const getCamerasByStatus = async () => {
+  const results = await Promise.all(
+    CAMERA_STATUSES.map((status) =>
+      supabase
+        .from('cameras')
+        .select('id', { head: true, count: 'exact' })
+        .eq('is_active', true)
+        .eq('status', status)
+    )
+  )
+
+  const counts: Record<string, number> = {}
+  results.forEach((res, i) => {
+    if (res.error) throw new Error(res.error.message)
+    if (res.count) counts[CAMERA_STATUSES[i]] = res.count
   })
   return counts
 }
@@ -73,9 +97,10 @@ export const getInspectionsByMonth = async () => {
 }
 
 export const getDashboardStats = async () => {
-  const [signalsByStatus, inspectionsByMonth] = await Promise.all([
+  const [signalsByStatus, camerasByStatus, inspectionsByMonth] = await Promise.all([
     getSignalsByStatus(),
+    getCamerasByStatus(),
     getInspectionsByMonth(),
   ])
-  return { signalsByStatus, inspectionsByMonth }
+  return { signalsByStatus, camerasByStatus, inspectionsByMonth }
 }

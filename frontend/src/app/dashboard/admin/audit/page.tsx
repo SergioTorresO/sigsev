@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import Modal from '@/components/Modal'
 import Pagination from '@/components/Pagination'
+import DateRangeFilter from '@/components/DateRangeFilter'
 
 type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'TOGGLE_ACTIVE' | 'BULK_IMPORT'
 
@@ -24,6 +25,16 @@ interface AuditLog {
 interface AuditResponse { data: AuditLog[]; total: number; page: number; limit: number }
 
 const LIMIT = 20
+
+// audit_logs.created_at se guarda en la BD como `timestamp` sin zona horaria, pero el valor
+// almacenado es UTC (ver el fix de hora en la tabla más abajo). Un <input type="date"> entrega
+// un día en calendario de Bogotá (UTC-5, sin horario de verano); hay que convertir ese límite de
+// día a su equivalente UTC "naive" (sin `Z`) para que coincida con lo que compara el backend
+// (`.gte`/`.lte` sobre ese mismo campo) — si no, el filtro queda corrido hasta 5 horas.
+const bogotaDayBoundaryToNaiveUtc = (dateStr: string, endOfDay: boolean) => {
+  const localIso = endOfDay ? `${dateStr}T23:59:59.999-05:00` : `${dateStr}T00:00:00.000-05:00`
+  return new Date(localIso).toISOString().slice(0, -1)
+}
 
 const ACTION_LABELS: Record<AuditAction, string> = {
   CREATE: 'Creación',
@@ -62,6 +73,8 @@ export default function AdminAuditPage() {
   const [page, setPage] = useState(1)
   const [tableFilter, setTableFilter] = useState('')
   const [actionFilter, setActionFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<AuditLog | null>(null)
@@ -72,6 +85,8 @@ export default function AdminAuditPage() {
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) })
       if (tableFilter) params.set('table_name', tableFilter)
       if (actionFilter) params.set('action', actionFilter)
+      if (dateFrom) params.set('date_from', bogotaDayBoundaryToNaiveUtc(dateFrom, false))
+      if (dateTo) params.set('date_to', bogotaDayBoundaryToNaiveUtc(dateTo, true))
       const res = await api.get<AuditResponse>(`/api/audit-logs?${params}`)
       setLogs(res.data)
       setTotal(res.total)
@@ -80,7 +95,7 @@ export default function AdminAuditPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, tableFilter, actionFilter])
+  }, [page, tableFilter, actionFilter, dateFrom, dateTo])
 
   useEffect(() => { fetchLogs() }, [fetchLogs])
 
@@ -88,7 +103,7 @@ export default function AdminAuditPage() {
 
   return (
     <DashboardLayout title="Auditoría" subtitle="Administración">
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
         <select
           aria-label="Filtrar por tabla"
           value={tableFilter}
@@ -113,6 +128,20 @@ export default function AdminAuditPage() {
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
+        <DateRangeFilter
+          value={{ from: dateFrom || undefined, to: dateTo || undefined }}
+          onChange={(v) => { setDateFrom(v.from ?? ''); setDateTo(v.to ?? ''); setPage(1) }}
+          label="Rango de fechas"
+        />
+        {(tableFilter || actionFilter || dateFrom || dateTo) && (
+          <button
+            type="button"
+            onClick={() => { setTableFilter(''); setActionFilter(''); setDateFrom(''); setDateTo(''); setPage(1) }}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {error && (
@@ -148,7 +177,10 @@ export default function AdminAuditPage() {
               ) : logs.map((log) => (
                 <tr key={log.id} className="hover:bg-zinc-50">
                   <td className="px-5 py-4 text-zinc-600">
-                    {new Date(log.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                    {/* audit_logs.created_at es `timestamp` sin zona horaria en la BD: Supabase lo
+                        devuelve sin sufijo `Z` (ej. "2026-09-30T16:22:25"), así que sin agregarlo
+                        el navegador lo interpreta como hora local en vez de UTC. */}
+                    {new Date(`${log.created_at}Z`).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Bogota' })}
                   </td>
                   <td className="px-5 py-4 text-zinc-700">{log.users?.full_name ?? 'Sistema'}</td>
                   <td className="px-5 py-4">
@@ -183,7 +215,7 @@ export default function AdminAuditPage() {
         {selected && (
           <>
             <p className="mb-4 text-sm text-zinc-500">
-              {selected.users?.full_name ?? 'Sistema'} · {new Date(selected.created_at).toLocaleString('es-CO')}
+              {selected.users?.full_name ?? 'Sistema'} · {new Date(`${selected.created_at}Z`).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

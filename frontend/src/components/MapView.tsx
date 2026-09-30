@@ -267,5 +267,9 @@ export default function MapView({
     }
   }, [signals, cameras])
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+  // isolation: 'isolate' crea un stacking context propio para este div: los paneles/controles
+  // internos de Leaflet (z-index hasta 1000) quedan contenidos aquí dentro y no pueden competir
+  // contra el drawer móvil del Sidebar (z-50) ni ningún otro elemento fixed fuera de este árbol —
+  // sin esto, el mapa se renderizaba por encima del menú móvil al abrirlo desde /dashboard/mapa.
+  return <div ref={containerRef} style={{ width: '100%', height: '100%', isolation: 'isolate' }} />
 }
